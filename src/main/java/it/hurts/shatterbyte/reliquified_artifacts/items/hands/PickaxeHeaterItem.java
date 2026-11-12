@@ -32,6 +32,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.level.BlockDropsEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class PickaxeHeaterItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -134,10 +135,10 @@ public class PickaxeHeaterItem extends RAWearableRelicItem {
         if (pendingSmeltResult >= 0 && pendingFortuneBonus >= 0)
             return pendingSmeltResult == 1 ? baseFortune + pendingFortuneBonus : baseFortune;
 
-        var smeltChance = Math.max(0D, Math.min(1D, ability.getStatData("smelt_chance").getValue()));
+        var smeltChance = Math.clamp(ability.getStatData("smelt_chance").getValue(), 0D, 1D);
 
         if (ability.getRankModifierData("overheat").isEnabled())
-            smeltChance = Math.max(0D, Math.min(1D, smeltChance + getSmeltPityStacks(stack) * Math.max(0D, ability.getStatData("stack_bonus").getValue())));
+            smeltChance = Math.clamp(smeltChance + getSmeltPityStacks(stack) * Math.max(0D, ability.getStatData("stack_bonus").getValue()), 0D, 1D);
         else
             setSmeltPityStacks(stack, 0);
 
@@ -155,9 +156,9 @@ public class PickaxeHeaterItem extends RAWearableRelicItem {
         if (ability.getRankModifierData("overheat").isEnabled())
             setSmeltPityStacks(stack, 0);
 
-        var chance = Math.max(0D, Math.min(1D, ability.getStatData("fortune_chance").getValue()));
+        var chance = Math.clamp(ability.getStatData("fortune_chance").getValue(), 0D, 1D);
         var maxCasts = Math.max(0, (int) MathUtils.round(ability.getStatData("fortune_max_casts").getValue(), 0));
-        var procs = chance <= 0D || maxCasts <= 0 ? 0 : MathUtils.multicast(player.getRandom(), chance, maxCasts);
+        var procs = chance <= 0D || maxCasts == 0 ? 0 : MathUtils.multicast(player.getRandom(), chance, maxCasts);
 
         setPendingSmeltResult(stack, 1);
         setPendingFortuneBonus(stack, Math.max(0, procs));
@@ -258,10 +259,10 @@ public class PickaxeHeaterItem extends RAWearableRelicItem {
                 success = pendingSmeltResult == 1;
                 relic.clearPendingSmeltRoll(relicStack);
             } else {
-                var chance = Math.max(0D, Math.min(1D, ability.getStatData("smelt_chance").getValue()));
+                var chance = Math.clamp(ability.getStatData("smelt_chance").getValue(), 0D, 1D);
 
                 if (ability.getRankModifierData("overheat").isEnabled())
-                    chance = Math.max(0D, Math.min(1D, chance + relic.getSmeltPityStacks(relicStack) * Math.max(0D, ability.getStatData("stack_bonus").getValue())));
+                    chance = Math.clamp(chance + relic.getSmeltPityStacks(relicStack) * Math.max(0D, ability.getStatData("stack_bonus").getValue()), 0D, 1D);
                 else
                     relic.setSmeltPityStacks(relicStack, 0);
 
@@ -333,7 +334,7 @@ public class PickaxeHeaterItem extends RAWearableRelicItem {
                 }
             }
 
-            if (igniteDuration <= 0D || igniteRelic == null)
+            if (igniteDuration <= 0D)
                 return;
 
             var target = event.getEntity();

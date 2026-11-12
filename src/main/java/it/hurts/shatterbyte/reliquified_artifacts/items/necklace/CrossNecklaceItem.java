@@ -24,6 +24,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
+@SuppressWarnings("resource")
 public class CrossNecklaceItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -118,7 +119,7 @@ public class CrossNecklaceItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(entity) || !ability.getRankModifierData("salvation").isEnabled())
                     continue;
 
-                var value = Math.max(0D, Math.min(1D, ability.getStatData("survival_chance").getValue()));
+                var value = Math.clamp(ability.getStatData("survival_chance").getValue(), 0D, 1D);
 
                 if (value > chance) {
                     chance = value;
@@ -137,14 +138,12 @@ public class CrossNecklaceItem extends RAWearableRelicItem {
 
             event.setNewDamage(newDamage);
 
-            if (salvationRelic != null) {
-                var relicData = salvationRelic.getRelicData(entity, salvationStack);
-                var ability = relicData.getAbilitiesData().getAbilityData("protection");
+            var relicData = salvationRelic.getRelicData(entity, salvationStack);
+            var ability = relicData.getAbilitiesData().getAbilityData("protection");
 
-                if (canceledDamage > 0F)
-                    relicData.getLevelingData().addExperience("protection", "salvation_save", canceledDamage);
-                ability.getStatisticData().getMetricData("fatal_cancels").addValue(1D);
-            }
+            if (canceledDamage > 0F)
+                relicData.getLevelingData().addExperience("protection", "salvation_save", canceledDamage);
+            ability.getStatisticData().getMetricData("fatal_cancels").addValue(1D);
         }
 
         @SubscribeEvent
@@ -194,13 +193,11 @@ public class CrossNecklaceItem extends RAWearableRelicItem {
             if (attacker != null && fireSeconds > 0F) {
                 attacker.igniteForSeconds(fireSeconds);
 
-                if (holyFireRelic != null) {
-                    var relicData = holyFireRelic.getRelicData(entity, holyFireStack);
-                    var ability = relicData.getAbilitiesData().getAbilityData("protection");
+                var relicData = holyFireRelic.getRelicData(entity, holyFireStack);
+                var ability = relicData.getAbilitiesData().getAbilityData("protection");
 
-                    relicData.getLevelingData().addExperience("protection", "holy_fire_ignite", 1D);
-                    ability.getStatisticData().getMetricData("holy_fire_duration").addValue(fireSeconds);
-                }
+                relicData.getLevelingData().addExperience("protection", "holy_fire_ignite", 1D);
+                ability.getStatisticData().getMetricData("holy_fire_duration").addValue(fireSeconds);
             }
         }
 
@@ -228,7 +225,7 @@ public class CrossNecklaceItem extends RAWearableRelicItem {
                 bonusTicks = Math.max(bonusTicks, invulnerabilityTicks);
             }
 
-            if (bonusTicks <= 0)
+            if (bonusTicks == 0)
                 return;
 
             var baseTicks = Math.max(0, event.getContainer().getPostAttackInvulnerabilityTicks());
@@ -259,7 +256,7 @@ public class CrossNecklaceItem extends RAWearableRelicItem {
 
                 relicData.getLevelingData().addExperience("protection", "smite_hit", 1D);
 
-                var value = Math.max(0D, Math.min(1D, ability.getStatData("undead_damage").getValue()));
+                var value = Math.clamp(ability.getStatData("undead_damage").getValue(), 0D, 1D);
 
                 if (value > bonus) {
                     bonus = value;
@@ -277,7 +274,7 @@ public class CrossNecklaceItem extends RAWearableRelicItem {
 
             event.setAmount(boostedDamage);
 
-            if (smiteRelic != null && additionalDamage > 0F) {
+            if (additionalDamage > 0F) {
                 var ability = smiteRelic.getRelicData(source, smiteStack).getAbilitiesData().getAbilityData("protection");
                 ability.getStatisticData().getMetricData("smite_bonus_damage").addValue(additionalDamage);
             }

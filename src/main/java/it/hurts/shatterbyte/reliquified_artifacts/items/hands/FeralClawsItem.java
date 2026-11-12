@@ -27,6 +27,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class FeralClawsItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -76,11 +77,11 @@ public class FeralClawsItem extends RAWearableRelicItem {
     public void onUnequip(SlotContext slotContext, ItemStack newStack, ItemStack stack) {
         super.onUnequip(slotContext, newStack, stack);
 
-        if (!(slotContext.entity() instanceof Player player) || stack.getItem() == newStack.getItem())
+        if (!(slotContext.entity() instanceof Player) || stack.getItem() == newStack.getItem())
             return;
 
         clearState(stack);
-        EntityUtils.removeAttribute(player, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     @Override
@@ -92,7 +93,7 @@ public class FeralClawsItem extends RAWearableRelicItem {
 
         if (!ability.canPlayerUse(player)) {
             clearState(stack);
-            EntityUtils.removeAttribute(player, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
             return;
         }
@@ -122,7 +123,7 @@ public class FeralClawsItem extends RAWearableRelicItem {
 
         if (charges <= 0) {
             clearState(stack);
-            EntityUtils.removeAttribute(player, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
             return;
         }
@@ -130,9 +131,9 @@ public class FeralClawsItem extends RAWearableRelicItem {
         var bonus = Math.max(0D, ability.getStatData("attack_speed_per_charge").getValue()) * charges;
 
         if (bonus <= 0D)
-            EntityUtils.removeAttribute(player, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         else
-            EntityUtils.resetAttribute(player, stack, Attributes.ATTACK_SPEED, (float) bonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.ATTACK_SPEED, (float) bonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     private static int secondsToTicks(double seconds) {
@@ -255,7 +256,7 @@ public class FeralClawsItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(player) || !ability.getRankModifierData("rend").isEnabled())
                     continue;
 
-                var value = Math.max(0D, Math.min(1D, ability.getStatData("invulnerability_reduction").getValue()));
+                var value = Math.clamp(ability.getStatData("invulnerability_reduction").getValue(), 0D, 1D);
                 reduction = Math.max(reduction, value);
             }
 

@@ -28,6 +28,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class PowerGloveItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -183,7 +184,7 @@ public class PowerGloveItem extends RAWearableRelicItem {
                 }
 
                 if (ability.getRankModifierData("armor_pierce").isEnabled()) {
-                    var value = Math.max(0D, Math.min(1D, ability.getStatData("armor_ignore").getValue()));
+                    var value = Math.clamp(ability.getStatData("armor_ignore").getValue(), 0D, 1D);
 
                     armorIgnore = Math.max(armorIgnore, value);
                 }
@@ -197,21 +198,20 @@ public class PowerGloveItem extends RAWearableRelicItem {
 
             if (damageBonus > 0D) {
                 boostedDamage = (float) (baseDamage * (1D + damageBonus));
-                event.setAmount((float) boostedDamage);
+                event.setAmount(boostedDamage);
             }
 
-            if (bestRelic != null) {
-                var relicData = bestRelic.getRelicData(player, bestStack);
-                var ability = relicData.getAbilitiesData().getAbilityData("power");
 
-                relicData.getLevelingData().addExperience("power", "power_strike", 1D);
-                ability.getStatisticData().getMetricData("power_strikes").addValue(1D);
+            var relicData = bestRelic.getRelicData(player, bestStack);
+            var ability = relicData.getAbilitiesData().getAbilityData("power");
 
-                var additionalDamage = Math.max(0F, (float) boostedDamage - baseDamage);
+            relicData.getLevelingData().addExperience("power", "power_strike", 1D);
+            ability.getStatisticData().getMetricData("power_strikes").addValue(1D);
 
-                if (additionalDamage > 0F)
-                    ability.getStatisticData().getMetricData("bonus_damage").addValue(additionalDamage);
-            }
+            var additionalDamage = Math.max(0F, boostedDamage - baseDamage);
+
+            if (additionalDamage > 0F)
+                ability.getStatisticData().getMetricData("bonus_damage").addValue(additionalDamage);
 
             if (armorIgnore > 0D) {
                 var armorIgnoreFinal = armorIgnore;

@@ -27,6 +27,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForgeMod;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
+@SuppressWarnings("resource")
 public class ThornPendantItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -121,7 +122,7 @@ public class ThornPendantItem extends RAWearableRelicItem {
                 if (attacker == null)
                     continue;
 
-                var reflect = Math.max(0D, Math.min(1D, ability.getStatData("reflect_damage").getValue()));
+                var reflect = Math.clamp(ability.getStatData("reflect_damage").getValue(), 0D, 1D);
 
                 if (reflect <= 0D)
                     continue;
@@ -188,7 +189,7 @@ public class ThornPendantItem extends RAWearableRelicItem {
                 if (!ability.getRankModifierData("damage").isEnabled())
                     continue;
 
-                var value = Math.max(0D, Math.min(1D, ability.getStatData("poisoned_damage_bonus").getValue()));
+                var value = Math.clamp(ability.getStatData("poisoned_damage_bonus").getValue(), 0D, 1D);
 
                 if (value > bonus) {
                     bonus = value;
@@ -200,7 +201,7 @@ public class ThornPendantItem extends RAWearableRelicItem {
             if (experienceRelic != null && !experienceStack.isEmpty())
                 experienceRelic.getRelicData(source, experienceStack).getLevelingData().addExperience("poison", "poisoned_hit", 1D);
 
-            if (bonus <= 0D || bonusRelic == null || bonusStack.isEmpty())
+            if (bonus <= 0D || bonusStack.isEmpty())
                 return;
 
             var baseDamage = event.getAmount();

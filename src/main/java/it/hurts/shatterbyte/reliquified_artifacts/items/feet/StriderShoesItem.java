@@ -20,6 +20,7 @@ import it.hurts.sskirillss.relics.init.RelicsScalingModels;
 import it.hurts.sskirillss.relics.utils.EntityUtils;
 import it.hurts.sskirillss.relics.utils.MathUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
@@ -27,6 +28,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -35,6 +37,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class StriderShoesItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -89,7 +92,7 @@ public class StriderShoesItem extends RAWearableRelicItem {
 
         var ability = this.getRelicData(player, stack).getAbilitiesData().getAbilityData("lava_stride");
         var freeStride = ability.getRankModifierData("free_stride").isEnabled();
-        var jumpBonus = ability.getRankModifierData("lava_jump").isEnabled() ? Math.max(0D, Math.min(1D, ability.getStatData("jump_bonus").getValue())) : 0D;
+        var jumpBonus = ability.getRankModifierData("lava_jump").isEnabled() ? Math.clamp(ability.getStatData("jump_bonus").getValue(), 0D, 1D) : 0D;
 
         if (!ability.canPlayerUse(player)) {
             resetStrideState(player, stack);
@@ -111,16 +114,16 @@ public class StriderShoesItem extends RAWearableRelicItem {
         var applyJumpBonus = jumpBonus > 0D && onSurface;
 
         if (!active) {
-            EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             if (applyJumpBonus)
-                EntityUtils.resetAttribute(player, stack, Attributes.JUMP_STRENGTH, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                EntityUtils.resetAttribute(slotContext, stack, Attributes.JUMP_STRENGTH, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             else
-                EntityUtils.removeAttribute(player, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                EntityUtils.removeAttribute(slotContext, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
             if (keepSafeFall)
-                EntityUtils.resetAttribute(player, stack, Attributes.SAFE_FALL_DISTANCE, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                EntityUtils.resetAttribute(slotContext, stack, Attributes.SAFE_FALL_DISTANCE, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             else
-                EntityUtils.removeAttribute(player, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                EntityUtils.removeAttribute(slotContext, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
             if (!keepRecovery)
                 setRecoveryTicks(stack, 0);
@@ -132,21 +135,21 @@ public class StriderShoesItem extends RAWearableRelicItem {
         var recoveryTicks = Math.min(maxRecoveryTicks, currentRecoveryTicks + 1);
         setRecoveryTicks(stack, recoveryTicks);
 
-        var penalty = Math.max(0D, Math.min(1D, ability.getStatData("speed_penalty").getValue()));
-        var progress = Math.max(0D, Math.min(1D, (double) recoveryTicks / (double) maxRecoveryTicks));
+        var penalty = Math.clamp(ability.getStatData("speed_penalty").getValue(), 0D, 1D);
+        var progress = Math.clamp((double) recoveryTicks / (double) maxRecoveryTicks, 0D, 1D);
         var currentPenalty = Math.max(0D, penalty * (1D - progress));
 
         if (currentPenalty > 0D)
-            EntityUtils.resetAttribute(player, stack, Attributes.MOVEMENT_SPEED, (float) -currentPenalty, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, (float) -currentPenalty, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         else
-            EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
         if (jumpBonus > 0D) {
-            EntityUtils.resetAttribute(player, stack, Attributes.JUMP_STRENGTH, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-            EntityUtils.resetAttribute(player, stack, Attributes.SAFE_FALL_DISTANCE, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.JUMP_STRENGTH, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.SAFE_FALL_DISTANCE, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         } else {
-            EntityUtils.removeAttribute(player, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-            EntityUtils.removeAttribute(player, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         }
     }
 
@@ -162,9 +165,15 @@ public class StriderShoesItem extends RAWearableRelicItem {
 
     private void resetStrideState(Player player, ItemStack stack) {
         setRecoveryTicks(stack, 0);
-        EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-        EntityUtils.removeAttribute(player, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-        EntityUtils.removeAttribute(player, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+
+        ResourceKey<Item> curioKey = ModItems.STRIDER_SHOES.getKey();
+        if (curioKey == null) {
+            throw new IllegalStateException("ResourceKey for Strider Shoes was null!");
+        }
+
+        EntityUtils.removeAttribute(player, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, curioKey.location());
+        EntityUtils.removeAttribute(player, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, curioKey.location());
+        EntityUtils.removeAttribute(player, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, curioKey.location());
     }
 
     private int getRecoveryTicks(ItemStack stack) {
@@ -326,7 +335,7 @@ public class StriderShoesItem extends RAWearableRelicItem {
                 if (!isOnLavaSurface(player))
                     continue;
 
-                var jumpBonus = Math.max(0D, Math.min(1D, ability.getStatData("jump_bonus").getValue()));
+                var jumpBonus = Math.clamp(ability.getStatData("jump_bonus").getValue(), 0D, 1D);
 
                 if (jumpBonus <= 0D)
                     continue;

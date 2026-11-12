@@ -23,6 +23,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -36,6 +37,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@SuppressWarnings("resource")
 public class NightVisionGogglesItem extends RAWearableRelicItem {
     private static final Map<UUID, Integer> DARK_MOVEMENT_TICKS = new HashMap<>();
 
@@ -155,17 +157,7 @@ public class NightVisionGogglesItem extends RAWearableRelicItem {
 
         var blockBrightness = level.getBrightness(LightLayer.BLOCK, pos);
         var skyBrightness = level.getBrightness(LightLayer.SKY, pos);
-        var maxBrightness = Math.max(1, level.getMaxLightLevel());
-        var skyDarken = level.getSkyDarken();
-        var maxSkyDarken = 11D;
-
-        var normalizedBlock = Math.max(0D, Math.min(1D, blockBrightness / (double) maxBrightness));
-        var normalizedSky = Math.max(0D, Math.min(1D, skyBrightness / (double) maxBrightness));
-        var skyFactor = Math.max(0D, Math.min(1D, 1D - (skyDarken / maxSkyDarken)));
-
-        // Any strong light source (sky or block) suppresses darkness effects.
-        var ambientBrightness = Math.max(normalizedBlock, normalizedSky * skyFactor);
-        var rawDarkness = Math.max(0D, Math.min(1D, 1D - ambientBrightness));
+        var rawDarkness = getRawDarkness(level, blockBrightness, skyBrightness);
 
         // Effects start only in genuinely dark places.
         var activationThreshold = 0.5D;
@@ -173,7 +165,21 @@ public class NightVisionGogglesItem extends RAWearableRelicItem {
         if (rawDarkness <= activationThreshold)
             return 0D;
 
-        return Math.max(0D, Math.min(1D, (rawDarkness - activationThreshold) / (1D - activationThreshold)));
+        return Math.clamp((rawDarkness - activationThreshold) / (1D - activationThreshold), 0D, 1D);
+    }
+
+    private static double getRawDarkness(Level level, int blockBrightness, int skyBrightness) {
+        var maxBrightness = Math.max(1, level.getMaxLightLevel());
+        var skyDarken = level.getSkyDarken();
+        var maxSkyDarken = 11D;
+
+        var normalizedBlock = Math.clamp(blockBrightness / (double) maxBrightness, 0D, 1D);
+        var normalizedSky = Math.clamp(skyBrightness / (double) maxBrightness, 0D, 1D);
+        var skyFactor = Math.clamp(1D - (skyDarken / maxSkyDarken), 0D, 1D);
+
+        // Any strong light source (sky or block) suppresses darkness effects.
+        var ambientBrightness = Math.max(normalizedBlock, normalizedSky * skyFactor);
+        return Math.clamp(1D - ambientBrightness, 0D, 1D);
     }
 
     private static boolean isMoving(Player player) {
@@ -199,7 +205,7 @@ public class NightVisionGogglesItem extends RAWearableRelicItem {
             if (!ability.canPlayerUse(player) || !ability.getMode().equals("enabled") || !ability.getRankModifierData("evasion").isEnabled())
                 return;
 
-            var baseChance = Math.max(0D, Math.min(1D, ability.getStatData("miss_chance").getValue()));
+            var baseChance = Math.clamp(ability.getStatData("miss_chance").getValue(), 0D, 1D);
 
             if (baseChance <= 0D)
                 return;

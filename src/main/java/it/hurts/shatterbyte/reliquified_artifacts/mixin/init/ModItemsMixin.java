@@ -12,11 +12,6 @@ import it.hurts.shatterbyte.reliquified_artifacts.items.feet.*;
 import it.hurts.shatterbyte.reliquified_artifacts.items.hands.*;
 import it.hurts.shatterbyte.reliquified_artifacts.items.hat.*;
 import it.hurts.shatterbyte.reliquified_artifacts.items.necklace.*;
-import it.hurts.shatterbyte.reliquified_artifacts.items.charm.*;
-import it.hurts.shatterbyte.reliquified_artifacts.items.feet.*;
-import it.hurts.shatterbyte.reliquified_artifacts.items.hands.*;
-import it.hurts.shatterbyte.reliquified_artifacts.items.hat.*;
-import it.hurts.shatterbyte.reliquified_artifacts.items.necklace.*;
 import net.minecraft.core.Holder;
 import net.minecraft.world.item.Item;
 import org.spongepowered.asm.mixin.Mixin;
@@ -31,7 +26,7 @@ import java.util.function.Supplier;
 public class ModItemsMixin {
 
     @Redirect(method = "<clinit>", at = @At(value = "INVOKE", target = "Lartifacts/registry/ModItems;wearableItem(Ljava/lang/String;Ljava/util/function/Consumer;)Lnet/minecraft/core/Holder;"))
-    private static Holder<Item> redirectWearableItem(String name, Consumer<WearableArtifactItem.Builder> builderConsumer) {
+    private static Holder<Item> redirectWearableItem(String name, Consumer<WearableArtifactItem.Builder> consumer) {
         return switch (name) {
             case "plastic_drinking_hat", "novelty_drinking_hat" -> register(name, DrinkingHatItem::new);
             case "snorkel" -> register(name, SnorkelItem::new);
@@ -77,7 +72,7 @@ public class ModItemsMixin {
             case "flippers" -> register(name, FlippersItem::new);
             case "strider_shoes" -> register(name, StriderShoesItem::new);
             case "aqua_dashers" -> register(name, AquaDashersItem::new);
-            default -> wearableItem(name, builderConsumer);
+            default -> wearableItem(name, consumer);
         };
     }
 

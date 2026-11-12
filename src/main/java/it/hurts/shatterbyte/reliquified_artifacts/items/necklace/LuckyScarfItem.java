@@ -36,6 +36,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.BlockDropsEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+
+@SuppressWarnings("resource")
 public class LuckyScarfItem extends RAWearableRelicItem {
 
     @Override
@@ -160,11 +162,11 @@ public class LuckyScarfItem extends RAWearableRelicItem {
         if (blockPos.asLong() == getLastBlockPos(stack))
             return baseFortune + getLastFortuneBonus(stack);
 
-        var chance = Math.max(0D, Math.min(1D, ability.getStatData("chance").getValue()));
+        var chance = Math.clamp(ability.getStatData("chance").getValue(), 0D, 1D);
         var maxCasts = Math.max(0, (int) MathUtils.round(ability.getStatData("max_casts").getValue(), 0));
         var chainMaxBonusCasts = Math.max(0, (int) MathUtils.round(ability.getStatData("chain_max_bonus_casts").getValue(), 0));
 
-        if (chance <= 0D || maxCasts <= 0) {
+        if (chance <= 0D || maxCasts == 0) {
             setLastBlockPos(stack, blockPos.asLong());
             setLastFortuneBonus(stack, 0);
             setPendingFortuneBonus(stack, 0);
@@ -172,7 +174,7 @@ public class LuckyScarfItem extends RAWearableRelicItem {
         }
 
         if (ability.getRankModifierData("pity").isEnabled()) {
-            chance = Math.max(0D, Math.min(1D, chance + getPityChanceBonus(stack)));
+            chance = Math.clamp(chance + getPityChanceBonus(stack), 0D, 1D);
         } else {
             setPityChanceBonus(stack, 0D);
         }
@@ -197,7 +199,7 @@ public class LuckyScarfItem extends RAWearableRelicItem {
                 var efficiencyPerBlock = Math.max(0D, ability.getStatData("vein_efficiency_per_block").getValue());
 
                 if (efficiencyPerBlock > 0D)
-                    chance = Math.max(0D, Math.min(1D, chance * (1D + efficiencyPerBlock * nearbySameBlocks)));
+                    chance = Math.clamp(chance * (1D + efficiencyPerBlock * nearbySameBlocks), 0D, 1D);
             }
         }
 
@@ -207,7 +209,7 @@ public class LuckyScarfItem extends RAWearableRelicItem {
             if (procs > 0) {
                 setPityChanceBonus(stack, 0D);
             } else {
-                var pityPerFail = Math.max(0D, Math.min(1D, ability.getStatData("pity_per_fail").getValue()));
+                var pityPerFail = Math.clamp(ability.getStatData("pity_per_fail").getValue(), 0D, 1D);
 
                 setPityChanceBonus(stack, Math.min(1D, getPityChanceBonus(stack) + pityPerFail));
             }

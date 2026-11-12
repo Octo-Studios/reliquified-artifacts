@@ -9,6 +9,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.NotNull;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotResult;
 
@@ -20,7 +21,7 @@ public class PowerJumpPacket implements CustomPacketPayload {
 
     public static final StreamCodec<RegistryFriendlyByteBuf, PowerJumpPacket> STREAM_CODEC = new StreamCodec<>() {
         @Override
-        public void encode(RegistryFriendlyByteBuf buf, PowerJumpPacket packet) {
+        public void encode(@NotNull RegistryFriendlyByteBuf buf, @NotNull PowerJumpPacket packet) {
         }
 
         @Nonnull
@@ -53,7 +54,7 @@ public class PowerJumpPacket implements CustomPacketPayload {
     }
 
     @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+    public CustomPacketPayload.@NotNull Type<? extends CustomPacketPayload> type() {
         return TYPE;
     }
 }

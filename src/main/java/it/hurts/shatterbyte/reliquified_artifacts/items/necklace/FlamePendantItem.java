@@ -26,6 +26,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class FlamePendantItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -141,7 +142,7 @@ public class FlamePendantItem extends RAWearableRelicItem {
                 if (attacker == null)
                     continue;
 
-                var chance = Math.max(0D, Math.min(1D, ability.getStatData("chance").getValue()));
+                var chance = Math.clamp(ability.getStatData("chance").getValue(), 0D, 1D);
 
                 if (chance <= 0D || entity.getRandom().nextDouble() > chance)
                     continue;
@@ -196,7 +197,7 @@ public class FlamePendantItem extends RAWearableRelicItem {
                 if (!ability.getRankModifierData("burning_damage").isEnabled())
                     continue;
 
-                var value = Math.max(0D, Math.min(1D, ability.getStatData("burning_damage_bonus").getValue()));
+                var value = Math.clamp(ability.getStatData("burning_damage_bonus").getValue(), 0D, 1D);
 
                 if (value > bonus) {
                     bonus = value;
@@ -217,7 +218,7 @@ public class FlamePendantItem extends RAWearableRelicItem {
 
             event.setAmount(boostedDamage);
 
-            if (bonusRelic != null && additionalDamage > 0F)
+            if (additionalDamage > 0F)
                 bonusRelic.getRelicData(source, bonusStack).getAbilitiesData().getAbilityData("fire")
                         .getStatisticData().getMetricData("burning_bonus_damage").addValue(additionalDamage);
         }

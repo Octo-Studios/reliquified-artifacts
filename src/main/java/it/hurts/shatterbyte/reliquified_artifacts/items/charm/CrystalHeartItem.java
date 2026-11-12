@@ -31,6 +31,7 @@ import net.neoforged.neoforge.event.entity.living.LivingHealEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class CrystalHeartItem extends RAWearableRelicItem {
 
     private static final ResourceLocation HEALTH_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath(ReliquifiedArtifacts.MODID, "crystal_heart_bonus_health");
@@ -187,7 +188,7 @@ public class CrystalHeartItem extends RAWearableRelicItem {
 
         attribute.removeModifier(new AttributeModifier(HEALTH_MODIFIER_ID, 0D, AttributeModifier.Operation.ADD_VALUE));
 
-        var maxHealth = (float) player.getMaxHealth();
+        var maxHealth = player.getMaxHealth();
 
         if (player.getHealth() > maxHealth)
             player.setHealth(maxHealth);
@@ -221,12 +222,12 @@ public class CrystalHeartItem extends RAWearableRelicItem {
                     continue;
 
                 if (ability.getRankModifierData("bastion").isEnabled() && player.getHealth() >= player.getMaxHealth() - 1.0E-3F) {
-                    var resist = Math.max(0D, Math.min(1D, ability.getStatData("full_health_resistance").getValue()));
+                    var resist = Math.clamp(ability.getStatData("full_health_resistance").getValue(), 0D, 1D);
                     reduction = Math.max(reduction, resist);
                 }
 
                 if (ability.getRankModifierData("survival").isEnabled()) {
-                    var threshold = Math.max(0D, Math.min(1D, ability.getStatData("heavy_hit_threshold").getValue()));
+                    var threshold = Math.clamp(ability.getStatData("heavy_hit_threshold").getValue(), 0D, 1D);
 
                     if (incomingAmount >= player.getMaxHealth() * threshold) {
                         var durationTicks = secondsToTicks(ability.getStatData("immortality_duration").getValue());
@@ -246,13 +247,12 @@ public class CrystalHeartItem extends RAWearableRelicItem {
             if (immortalityTicks > 0) {
                 player.addEffect(new MobEffectInstance(RelicsMobEffects.IMMORTALITY, immortalityTicks, 0, false, false));
 
-                if (immortalityRelic != null) {
-                    var relicData = immortalityRelic.getRelicData(player, immortalityStack);
-                    var ability = relicData.getAbilitiesData().getAbilityData("heart");
+                var relicData = immortalityRelic.getRelicData(player, immortalityStack);
+                var ability = relicData.getAbilitiesData().getAbilityData("heart");
 
-                    relicData.getLevelingData().addExperience("heart", "immortality_trigger", 1D);
-                    ability.getStatisticData().getMetricData("immortality_triggers").addValue(1D);
-                }
+                relicData.getLevelingData().addExperience("heart", "immortality_trigger", 1D);
+                ability.getStatisticData().getMetricData("immortality_triggers").addValue(1D);
+
             }
         }
 
@@ -263,7 +263,7 @@ public class CrystalHeartItem extends RAWearableRelicItem {
 
             var currentHealth = player.getHealth();
             var maxHealth = player.getMaxHealth();
-            var incomingHeal = Math.min(event.getAmount(), Math.max(0F, maxHealth - currentHealth));
+            var incomingHeal = Math.clamp(maxHealth - currentHealth, 0F, event.getAmount());
             var bonusExtraHeal = 0D;
             CrystalHeartItem experienceRelic = null;
             ItemStack experienceStack = ItemStack.EMPTY;
@@ -308,18 +308,20 @@ public class CrystalHeartItem extends RAWearableRelicItem {
             if (bonusExtraHeal > 0D)
                 event.setAmount((float) (event.getAmount() + bonusExtraHeal));
 
-            if (experienceRelic == null || experienceBonusHealth <= 0D || event.getAmount() <= 0F)
+            // there was an `experienceBonusHealth <= 0D` check. But this code is only ever reached
+            // when `bonusHealth > experienceBonusHealth`. `experienceBonusHealth` is initialized with 0D,
+            // which means it's never 0 by the moment this part is reached. Removed the pointless check.
+            if (experienceRelic == null || event.getAmount() <= 0F)
                 return;
 
-            var healApplied = Math.min(event.getAmount(), Math.max(0F, maxHealth - currentHealth));
+            var healApplied = Math.clamp(maxHealth - currentHealth, 0F, event.getAmount());
 
             if (healApplied <= 0F)
                 return;
 
             var baseHealthThreshold = Math.max(0D, maxHealth - experienceBonusHealth);
-            var start = currentHealth;
             var end = Math.min(maxHealth, currentHealth + healApplied);
-            var healedInBonusHealth = Math.max(0D, end - Math.max(start, baseHealthThreshold));
+            var healedInBonusHealth = Math.max(0D, end - Math.max(currentHealth, baseHealthThreshold));
 
             if (healedInBonusHealth <= 0D)
                 return;

@@ -42,6 +42,7 @@ import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
 
 import java.util.List;
 
+@SuppressWarnings("resource")
 public class AnglersHatItem extends RAWearableRelicItem {
     private static final TagKey<Item> ANGLERS_HAT_VALUABLES = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(ReliquifiedArtifacts.MODID, "anglers_hat_valuables"));
 
@@ -198,7 +199,7 @@ public class AnglersHatItem extends RAWearableRelicItem {
             var valuables = List.<Item>of();
 
             if (ability.getRankModifierData("treasure").isEnabled()) {
-                treasureChance = Math.max(0D, Math.min(1D, ability.getStatData("treasure_chance").getValue()));
+                treasureChance = Math.clamp(ability.getStatData("treasure_chance").getValue(), 0D, 1D);
 
                 if (treasureChance > 0D) {
                     valuables = BuiltInRegistries.ITEM.getTag(ANGLERS_HAT_VALUABLES)
@@ -228,7 +229,7 @@ public class AnglersHatItem extends RAWearableRelicItem {
 
             catches += event.getDrops().size();
 
-            var chance = Math.max(0D, Math.min(1D, ability.getStatData("chance").getValue()));
+            var chance = Math.clamp(ability.getStatData("chance").getValue(), 0D, 1D);
             var maxCasts = Math.max(0, (int) MathUtils.round(ability.getStatData("max_casts").getValue(), 0));
 
             if (chance > 0D && maxCasts > 0) {

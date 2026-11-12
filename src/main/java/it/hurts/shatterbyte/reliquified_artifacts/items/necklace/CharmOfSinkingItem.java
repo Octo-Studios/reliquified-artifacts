@@ -33,6 +33,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class CharmOfSinkingItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -303,7 +304,7 @@ public class CharmOfSinkingItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(player) || !ability.getRankModifierData("resistance").isEnabled())
                     continue;
 
-                var perBlock = Math.max(0D, Math.min(1D, ability.getStatData("resistance_per_block").getValue()));
+                var perBlock = Math.clamp(ability.getStatData("resistance_per_block").getValue(), 0D, 1D);
                 var value = Math.min(1D, perBlock * waterDepth);
 
                 if (value > reduction) {
@@ -322,7 +323,7 @@ public class CharmOfSinkingItem extends RAWearableRelicItem {
 
             event.setAmount(reducedDamage);
 
-            if (bestRelic != null && blockedDamage > 0F) {
+            if (blockedDamage > 0F) {
                 var relicData = bestRelic.getRelicData(player, bestStack);
                 var ability = relicData.getAbilitiesData().getAbilityData("sinking");
 

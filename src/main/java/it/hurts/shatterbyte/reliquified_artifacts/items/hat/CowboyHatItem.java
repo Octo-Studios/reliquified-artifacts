@@ -19,6 +19,7 @@ import it.hurts.sskirillss.relics.init.RelicsScalingModels;
 import it.hurts.sskirillss.relics.utils.EntityUtils;
 import it.hurts.sskirillss.relics.utils.MathUtils;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -26,6 +27,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -37,6 +39,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@SuppressWarnings("resource")
 public class CowboyHatItem extends RAWearableRelicItem {
     private static final int NO_MOUNT = -1;
     private static final Map<UUID, Vec3> LAST_MOUNT_POSITIONS = new HashMap<>();
@@ -101,16 +104,16 @@ public class CowboyHatItem extends RAWearableRelicItem {
 
         if (!ability.canPlayerUse(player)) {
             clearMountBuff(player, stack);
-            removeRiderReachBuff(player, stack);
-            removeRiderAbsorptionBonus(player, stack);
+            removeRiderReachBuff(player);
+            removeRiderAbsorptionBonus(slotContext, stack);
             clearDistanceTracking(player);
             return;
         }
 
         if (!(player.getVehicle() instanceof LivingEntity mounted)) {
             clearMountBuff(player, stack);
-            removeRiderReachBuff(player, stack);
-            removeRiderAbsorptionBonus(player, stack);
+            removeRiderReachBuff(player);
+            removeRiderAbsorptionBonus(slotContext, stack);
             clearDistanceTracking(player);
             return;
         }
@@ -122,24 +125,24 @@ public class CowboyHatItem extends RAWearableRelicItem {
         var amount = Math.max(0F, (float) ability.getStatData("amount").getValue());
 
         if (amount > 0F) {
-            applyMountedBuff(stack, mounted, amount);
+            applyMountedBuff(mounted, amount);
         } else {
-            removeMountedBuff(stack, mounted);
+            removeMountedBuff(mounted);
         }
 
         if (!ability.getRankModifierData("reach").isEnabled()) {
-            removeRiderReachBuff(player, stack);
+            removeRiderReachBuff(player);
         } else {
             var reach = Math.max(0F, (float) ability.getStatData("reach").getValue());
 
             if (reach > 0F)
-                applyRiderReachBuff(player, stack, reach);
+                applyRiderReachBuff(player, reach);
             else
-                removeRiderReachBuff(player, stack);
+                removeRiderReachBuff(player);
         }
 
         if (!ability.getRankModifierData("mounted_absorption").isEnabled()) {
-            removeRiderAbsorptionBonus(player, stack);
+            removeRiderAbsorptionBonus(slotContext, stack);
             return;
         }
 
@@ -148,14 +151,14 @@ public class CowboyHatItem extends RAWearableRelicItem {
         if (absorption > 0D) {
             var previousRemaining = getRiderAbsorptionRemaining(stack);
 
-            applyRiderAbsorptionBonus(player, stack, absorption, mountedChanged);
+            applyRiderAbsorptionBonus(slotContext, stack, absorption, mountedChanged);
 
             var consumed = Math.max(0D, previousRemaining - getRiderAbsorptionRemaining(stack));
 
             if (consumed > 0D)
                 ability.getStatisticData().getMetricData("absorbed_damage").addValue(consumed);
         } else {
-            removeRiderAbsorptionBonus(player, stack);
+            removeRiderAbsorptionBonus(slotContext, stack);
         }
     }
 
@@ -165,8 +168,8 @@ public class CowboyHatItem extends RAWearableRelicItem {
             return;
 
         clearMountBuff(player, stack);
-        removeRiderReachBuff(player, stack);
-        removeRiderAbsorptionBonus(player, stack);
+        removeRiderReachBuff(player);
+        removeRiderAbsorptionBonus(slotContext, stack);
         clearDistanceTracking(player);
     }
 
@@ -217,53 +220,53 @@ public class CowboyHatItem extends RAWearableRelicItem {
         if (lastMountId == mounted.getId())
             return false;
 
-        removeMountBuffById(player, stack, lastMountId);
+        removeMountBuffById(player, lastMountId);
         setLastMountId(stack, mounted.getId());
         return true;
     }
 
     private void clearMountBuff(Player player, ItemStack stack) {
-        removeMountBuffById(player, stack, getLastMountId(stack));
+        removeMountBuffById(player, getLastMountId(stack));
         setLastMountId(stack, NO_MOUNT);
     }
 
-    private void removeMountBuffById(Player player, ItemStack stack, int entityId) {
+    private void removeMountBuffById(Player player, int entityId) {
         if (entityId == NO_MOUNT)
             return;
 
         if (player.level().getEntity(entityId) instanceof LivingEntity mounted)
-            removeMountedBuff(stack, mounted);
+            removeMountedBuff(mounted);
     }
 
-    private void applyMountedBuff(ItemStack stack, LivingEntity mounted, float amount) {
-        resetMountedMaxHealthKeepingRatio(mounted, stack, amount);
-        resetLivingAttribute(mounted, stack, Attributes.MOVEMENT_SPEED, amount);
-        resetLivingAttribute(mounted, stack, Attributes.JUMP_STRENGTH, amount);
-        resetLivingAttribute(mounted, stack, Attributes.ATTACK_DAMAGE, amount);
-        resetLivingAttribute(mounted, stack, Attributes.ATTACK_KNOCKBACK, amount);
-        resetLivingAttribute(mounted, stack, Attributes.FLYING_SPEED, amount);
-        resetLivingAttribute(mounted, stack, Attributes.ARMOR, amount);
-        resetLivingAttribute(mounted, stack, Attributes.ARMOR_TOUGHNESS, amount);
-        resetLivingAttribute(mounted, stack, Attributes.KNOCKBACK_RESISTANCE, amount);
+    private void applyMountedBuff(LivingEntity mounted, float amount) {
+        resetMountedMaxHealthKeepingRatio(mounted, amount);
+        resetLivingAttribute(mounted, Attributes.MOVEMENT_SPEED, amount);
+        resetLivingAttribute(mounted, Attributes.JUMP_STRENGTH, amount);
+        resetLivingAttribute(mounted, Attributes.ATTACK_DAMAGE, amount);
+        resetLivingAttribute(mounted, Attributes.ATTACK_KNOCKBACK, amount);
+        resetLivingAttribute(mounted, Attributes.FLYING_SPEED, amount);
+        resetLivingAttribute(mounted, Attributes.ARMOR, amount);
+        resetLivingAttribute(mounted, Attributes.ARMOR_TOUGHNESS, amount);
+        resetLivingAttribute(mounted, Attributes.KNOCKBACK_RESISTANCE, amount);
     }
 
-    private void removeMountedBuff(ItemStack stack, LivingEntity mounted) {
-        removeMountedMaxHealthKeepingRatio(mounted, stack);
-        removeLivingAttribute(mounted, stack, Attributes.MOVEMENT_SPEED);
-        removeLivingAttribute(mounted, stack, Attributes.JUMP_STRENGTH);
-        removeLivingAttribute(mounted, stack, Attributes.ATTACK_DAMAGE);
-        removeLivingAttribute(mounted, stack, Attributes.ATTACK_KNOCKBACK);
-        removeLivingAttribute(mounted, stack, Attributes.FLYING_SPEED);
-        removeLivingAttribute(mounted, stack, Attributes.ARMOR);
-        removeLivingAttribute(mounted, stack, Attributes.ARMOR_TOUGHNESS);
-        removeLivingAttribute(mounted, stack, Attributes.KNOCKBACK_RESISTANCE);
+    private void removeMountedBuff(LivingEntity mounted) {
+        removeMountedMaxHealthKeepingRatio(mounted);
+        removeLivingAttribute(mounted, Attributes.MOVEMENT_SPEED);
+        removeLivingAttribute(mounted, Attributes.JUMP_STRENGTH);
+        removeLivingAttribute(mounted, Attributes.ATTACK_DAMAGE);
+        removeLivingAttribute(mounted, Attributes.ATTACK_KNOCKBACK);
+        removeLivingAttribute(mounted, Attributes.FLYING_SPEED);
+        removeLivingAttribute(mounted, Attributes.ARMOR);
+        removeLivingAttribute(mounted, Attributes.ARMOR_TOUGHNESS);
+        removeLivingAttribute(mounted, Attributes.KNOCKBACK_RESISTANCE);
     }
 
-    private void resetMountedMaxHealthKeepingRatio(LivingEntity mounted, ItemStack stack, float amount) {
+    private void resetMountedMaxHealthKeepingRatio(LivingEntity mounted, float amount) {
         var oldMaxHealth = Math.max(1.0E-4F, mounted.getMaxHealth());
-        var healthRatio = Math.max(0D, Math.min(1D, mounted.getHealth() / oldMaxHealth));
+        var healthRatio = Math.clamp(mounted.getHealth() / oldMaxHealth, 0D, 1D);
 
-        resetLivingAttribute(mounted, stack, Attributes.MAX_HEALTH, amount);
+        resetLivingAttribute(mounted, Attributes.MAX_HEALTH, amount);
 
         var newMaxHealth = mounted.getMaxHealth();
 
@@ -273,11 +276,11 @@ public class CowboyHatItem extends RAWearableRelicItem {
         mounted.setHealth((float) Math.max(0F, Math.min(newMaxHealth, newMaxHealth * healthRatio)));
     }
 
-    private void removeMountedMaxHealthKeepingRatio(LivingEntity mounted, ItemStack stack) {
+    private void removeMountedMaxHealthKeepingRatio(LivingEntity mounted) {
         var oldMaxHealth = Math.max(1.0E-4F, mounted.getMaxHealth());
-        var healthRatio = Math.max(0D, Math.min(1D, mounted.getHealth() / oldMaxHealth));
+        var healthRatio = Math.clamp(mounted.getHealth() / oldMaxHealth, 0D, 1D);
 
-        removeLivingAttribute(mounted, stack, Attributes.MAX_HEALTH);
+        removeLivingAttribute(mounted, Attributes.MAX_HEALTH);
 
         var newMaxHealth = mounted.getMaxHealth();
 
@@ -287,60 +290,64 @@ public class CowboyHatItem extends RAWearableRelicItem {
         mounted.setHealth((float) Math.max(0F, Math.min(newMaxHealth, newMaxHealth * healthRatio)));
     }
 
-    private void applyRiderReachBuff(Player player, ItemStack stack, float amount) {
-        resetLivingAttribute(player, stack, Attributes.ENTITY_INTERACTION_RANGE, amount);
-        resetLivingAttribute(player, stack, Attributes.BLOCK_INTERACTION_RANGE, amount);
+    private void applyRiderReachBuff(Player player, float amount) {
+        resetLivingAttribute(player, Attributes.ENTITY_INTERACTION_RANGE, amount);
+        resetLivingAttribute(player, Attributes.BLOCK_INTERACTION_RANGE, amount);
     }
 
-    private void removeRiderReachBuff(Player player, ItemStack stack) {
-        removeLivingAttribute(player, stack, Attributes.ENTITY_INTERACTION_RANGE);
-        removeLivingAttribute(player, stack, Attributes.BLOCK_INTERACTION_RANGE);
+    private void removeRiderReachBuff(Player player) {
+        removeLivingAttribute(player, Attributes.ENTITY_INTERACTION_RANGE);
+        removeLivingAttribute(player, Attributes.BLOCK_INTERACTION_RANGE);
     }
 
-    private void applyRiderAbsorptionBonus(Player player, ItemStack stack, double bonus, boolean grantOnMount) {
-        setRiderMaxAbsorption(player, stack, bonus);
+    private void applyRiderAbsorptionBonus(SlotContext slotContext, ItemStack stack, double bonus, boolean grantOnMount) {
+        setRiderMaxAbsorption(slotContext, stack, bonus);
 
         if (grantOnMount) {
-            player.setAbsorptionAmount((float) (Math.max(0D, player.getAbsorptionAmount()) + bonus));
+            slotContext.entity().setAbsorptionAmount((float) (Math.max(0D, slotContext.entity().getAbsorptionAmount()) + bonus));
             setRiderAbsorptionRemaining(stack, getRiderAbsorptionRemaining(stack) + bonus);
         }
 
         var remaining = getRiderAbsorptionRemaining(stack);
-        var current = Math.max(0D, player.getAbsorptionAmount());
+        var current = Math.max(0D, slotContext.entity().getAbsorptionAmount());
 
         setRiderAbsorptionRemaining(stack, Math.min(remaining, current));
     }
 
-    private void removeRiderAbsorptionBonus(Player player, ItemStack stack) {
+    private void removeRiderAbsorptionBonus(SlotContext slotContext, ItemStack stack) {
         var remaining = getRiderAbsorptionRemaining(stack);
-        var current = Math.max(0D, player.getAbsorptionAmount());
+        var current = Math.max(0D, slotContext.entity().getAbsorptionAmount());
 
-        removeRiderMaxAbsorption(player, stack);
+        removeRiderMaxAbsorption(slotContext, stack);
 
         if (remaining > 0D)
-            player.setAbsorptionAmount((float) Math.max(0D, current - remaining));
+            slotContext.entity().setAbsorptionAmount((float) Math.max(0D, current - remaining));
 
         setRiderAbsorptionRemaining(stack, 0D);
     }
 
-    private void setRiderMaxAbsorption(Player player, ItemStack stack, double value) {
-        if (player.getAttribute(Attributes.MAX_ABSORPTION) != null)
-            EntityUtils.resetAttribute(player, stack, Attributes.MAX_ABSORPTION, (float) Math.max(0D, value), AttributeModifier.Operation.ADD_VALUE);
+    private void setRiderMaxAbsorption(SlotContext slotContext, ItemStack stack, double value) {
+        if (slotContext.entity().getAttribute(Attributes.MAX_ABSORPTION) != null)
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.MAX_ABSORPTION, (float) Math.max(0D, value), AttributeModifier.Operation.ADD_VALUE);
     }
 
-    private void removeRiderMaxAbsorption(Player player, ItemStack stack) {
-        if (player.getAttribute(Attributes.MAX_ABSORPTION) != null)
-            EntityUtils.removeAttribute(player, stack, Attributes.MAX_ABSORPTION, AttributeModifier.Operation.ADD_VALUE);
+    private void removeRiderMaxAbsorption(SlotContext slotContext, ItemStack stack) {
+        if (slotContext.entity().getAttribute(Attributes.MAX_ABSORPTION) != null)
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.MAX_ABSORPTION, AttributeModifier.Operation.ADD_VALUE);
     }
 
-    private void resetLivingAttribute(LivingEntity entity, ItemStack stack, Holder<Attribute> attribute, float amount) {
-        if (entity.getAttribute(attribute) != null)
-            EntityUtils.resetAttribute(entity, stack, attribute, amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+    private void resetLivingAttribute(LivingEntity entity, Holder<Attribute> attribute, float amount) {
+        if (entity.getAttribute(attribute) == null) return;
+        ResourceKey<Item> curioKey = ModItems.VAMPIRIC_GLOVE.getKey();
+        if (curioKey == null) return;
+        EntityUtils.resetAttribute(entity, attribute, amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, curioKey.location());
     }
 
-    private void removeLivingAttribute(LivingEntity entity, ItemStack stack, Holder<Attribute> attribute) {
-        if (entity.getAttribute(attribute) != null)
-            EntityUtils.removeAttribute(entity, stack, attribute, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+    private void removeLivingAttribute(LivingEntity entity, Holder<Attribute> attribute) {
+        if (entity.getAttribute(attribute) == null) return;
+        ResourceKey<Item> curioKey = ModItems.VAMPIRIC_GLOVE.getKey();
+        if (curioKey == null) return;
+        EntityUtils.removeAttribute(entity, attribute, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, curioKey.location());
     }
 
     private int getLastMountId(ItemStack stack) {

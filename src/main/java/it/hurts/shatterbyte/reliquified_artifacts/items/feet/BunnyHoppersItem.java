@@ -47,6 +47,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+@SuppressWarnings("resource")
 public class BunnyHoppersItem extends RAWearableRelicItem {
     private static final Set<UUID> CLIENT_JUMP_LOCK = new HashSet<>();
 
@@ -525,7 +526,7 @@ public class BunnyHoppersItem extends RAWearableRelicItem {
                 }
             }
 
-            if (bonus <= 0D || impactRelic == null || impactStack.isEmpty())
+            if (bonus <= 0D || impactStack.isEmpty())
                 return;
 
             var baseDamage = event.getAmount();

@@ -29,6 +29,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class DiggingClawsItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -112,19 +113,13 @@ public class DiggingClawsItem extends RAWearableRelicItem {
 
         var tier = tiered.getTier();
 
-        if (tier == Tiers.NETHERITE || tier == Tiers.DIAMOND)
-            return 3;
-
-        if (tier == Tiers.IRON)
-            return 2;
-
-        if (tier == Tiers.STONE)
-            return 1;
-
-        if (tier == Tiers.WOOD || tier == Tiers.GOLD)
-            return 0;
-
-        return -1;
+        return switch (tier) {
+            case Tiers.NETHERITE, Tiers.DIAMOND -> 3;
+            case Tiers.IRON -> 2;
+            case Tiers.STONE -> 1;
+            case Tiers.WOOD, Tiers.GOLD -> 0;
+            default -> -1;
+        };
     }
 
     private static int getRequiredTierLevel(BlockState state) {

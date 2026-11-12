@@ -29,6 +29,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class FlippersItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -88,8 +89,8 @@ public class FlippersItem extends RAWearableRelicItem {
         var ability = this.getRelicData(player, stack).getAbilitiesData().getAbilityData("swim");
 
         if (!ability.canPlayerUse(player)) {
-            EntityUtils.removeAttribute(player, stack, NeoForgeMod.SWIM_SPEED, AttributeModifier.Operation.ADD_VALUE);
-            EntityUtils.removeAttribute(player, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, NeoForgeMod.SWIM_SPEED, AttributeModifier.Operation.ADD_VALUE);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             return;
         }
 
@@ -97,19 +98,19 @@ public class FlippersItem extends RAWearableRelicItem {
         var speedBonus = Math.max(0D, ability.getStatData("speed").getValue());
 
         if (speedBonus <= 0D)
-            EntityUtils.removeAttribute(player, stack, NeoForgeMod.SWIM_SPEED, AttributeModifier.Operation.ADD_VALUE);
+            EntityUtils.removeAttribute(slotContext, stack, NeoForgeMod.SWIM_SPEED, AttributeModifier.Operation.ADD_VALUE);
         else
-            EntityUtils.applyAttribute(player, stack, NeoForgeMod.SWIM_SPEED, (float) speedBonus, AttributeModifier.Operation.ADD_VALUE);
+            EntityUtils.applyAttribute(slotContext, stack, NeoForgeMod.SWIM_SPEED, (float) speedBonus, AttributeModifier.Operation.ADD_VALUE);
 
         if (inWater && ability.getRankModifierData("buoyancy").isEnabled())
-            EntityUtils.resetAttribute(player, stack, Attributes.GRAVITY, -1F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.GRAVITY, -1F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         else
-            EntityUtils.removeAttribute(player, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
         if (!inWater || !ability.getRankModifierData("breathing").isEnabled() || !player.isEyeInFluid(FluidTags.WATER) || player.getAirSupply() >= player.getMaxAirSupply())
             return;
 
-        var reduction = Math.max(0D, Math.min(1D, ability.getStatData("air_loss_reduction").getValue()));
+        var reduction = Math.clamp(ability.getStatData("air_loss_reduction").getValue(), 0D, 1D);
 
         if (reduction > 0D && player.getRandom().nextDouble() <= reduction)
             player.setAirSupply(Math.min(player.getMaxAirSupply(), player.getAirSupply() + 1));
@@ -119,11 +120,11 @@ public class FlippersItem extends RAWearableRelicItem {
     public void onUnequip(SlotContext slotContext, ItemStack newStack, ItemStack stack) {
         super.onUnequip(slotContext, newStack, stack);
 
-        if (stack.getItem() == newStack.getItem() || !(slotContext.entity() instanceof Player player))
+        if (stack.getItem() == newStack.getItem() || !(slotContext.entity() instanceof Player))
             return;
 
-        EntityUtils.removeAttribute(player, stack, NeoForgeMod.SWIM_SPEED, AttributeModifier.Operation.ADD_VALUE);
-        EntityUtils.removeAttribute(player, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, NeoForgeMod.SWIM_SPEED, AttributeModifier.Operation.ADD_VALUE);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
 
@@ -190,7 +191,7 @@ public class FlippersItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(player) || !ability.getRankModifierData("evasion").isEnabled())
                     continue;
 
-                var chance = Math.max(0D, Math.min(1D, ability.getStatData("evasion").getValue()));
+                var chance = Math.clamp(ability.getStatData("evasion").getValue(), 0D, 1D);
 
                 if (chance > missChance) {
                     missChance = chance;
@@ -205,14 +206,12 @@ public class FlippersItem extends RAWearableRelicItem {
             var dodgedDamage = event.getAmount();
             event.setCanceled(true);
 
-            if (evasionRelic != null) {
-                var relicData = evasionRelic.getRelicData(player, evasionStack);
-                var ability = relicData.getAbilitiesData().getAbilityData("swim");
+            var relicData = evasionRelic.getRelicData(player, evasionStack);
+            var ability = relicData.getAbilitiesData().getAbilityData("swim");
 
-                relicData.getLevelingData().addExperience("swim", "evasion_miss", 1D);
-                ability.getStatisticData().getMetricData("evasion_misses").addValue(1D);
-                ability.getStatisticData().getMetricData("evasion_damage_dodged").addValue(dodgedDamage);
-            }
+            relicData.getLevelingData().addExperience("swim", "evasion_miss", 1D);
+            ability.getStatisticData().getMetricData("evasion_misses").addValue(1D);
+            ability.getStatisticData().getMetricData("evasion_damage_dodged").addValue(dodgedDamage);
         }
     }
 }

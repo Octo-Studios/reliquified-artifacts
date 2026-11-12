@@ -5,7 +5,6 @@ import it.hurts.shatterbyte.reliquified_artifacts.ReliquifiedArtifacts;
 import it.hurts.shatterbyte.reliquified_artifacts.handlers.KnockbackHelper;
 import it.hurts.shatterbyte.reliquified_artifacts.init.RADataComponent;
 import it.hurts.shatterbyte.reliquified_artifacts.items.base.RARelicItem;
-import it.hurts.shatterbyte.reliquified_artifacts.items.base.RAWearableRelicItem;
 import it.hurts.shatterbyte.reliquified_artifacts.network.packets.UmbrellaBouncePacket;
 import it.hurts.sskirillss.relics.api.relics.AbilityMetricTemplate;
 import it.hurts.sskirillss.relics.api.relics.AbilityStatisticTemplate;
@@ -46,10 +45,11 @@ import net.neoforged.neoforge.common.ItemAbilities;
 import net.neoforged.neoforge.common.ItemAbility;
 import net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import top.theillusivec4.curios.api.SlotContext;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 
+@SuppressWarnings("resource")
 public class UmbrellaItem extends RARelicItem {
     private static final int BOUNCE_ITEM_COOLDOWN_TICKS = 10;
 
@@ -131,7 +131,7 @@ public class UmbrellaItem extends RARelicItem {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, Player player, @NotNull InteractionHand hand) {
         var stack = player.getItemInHand(hand);
 
         if (player.getCooldowns().isOnCooldown(stack.getItem()))
@@ -151,22 +151,22 @@ public class UmbrellaItem extends RARelicItem {
     }
 
     @Override
-    public UseAnim getUseAnimation(ItemStack stack) {
+    public @NotNull UseAnim getUseAnimation(@NotNull ItemStack stack) {
         return UseAnim.BLOCK;
     }
 
     @Override
-    public int getUseDuration(ItemStack stack, LivingEntity entity) {
+    public int getUseDuration(@NotNull ItemStack stack, @NotNull LivingEntity entity) {
         return 72000;
     }
 
     @Override
-    public boolean canPerformAction(ItemStack stack, ItemAbility itemAbility) {
+    public boolean canPerformAction(@NotNull ItemStack stack, @NotNull ItemAbility itemAbility) {
         return ItemAbilities.DEFAULT_SHIELD_ACTIONS.contains(itemAbility) || super.canPerformAction(stack, itemAbility);
     }
 
     @Override
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
+    public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
 
         if (!(entity instanceof Player player)) {
@@ -192,13 +192,6 @@ public class UmbrellaItem extends RARelicItem {
             setBounceCount(stack, 0);
             setBounceLandingRequired(stack, false);
             setFallTicks(stack, 0);
-        }
-
-        if (isBounceLandingRequired(stack)) {
-            if (isFalling && hasSlowFallDelayPassed(stack))
-                applySlowFall(player, stack);
-
-            return;
         }
 
         if (isFalling && hasSlowFallDelayPassed(stack))
@@ -389,7 +382,7 @@ public class UmbrellaItem extends RARelicItem {
         var durationSeconds = Math.max(0D, ability.getStatData("vanishing_duration").getValue());
         var durationTicks = Math.max(0, (int) Math.round(durationSeconds * 20D));
 
-        if (durationTicks <= 0)
+        if (durationTicks == 0)
             return;
 
         player.addEffect(new MobEffectInstance(RelicsMobEffects.VANISHING, durationTicks, 0, false, false));
@@ -485,10 +478,6 @@ public class UmbrellaItem extends RARelicItem {
         stack.set(RADataComponent.UMBRELLA_BOUNCE_COUNT.get(), Math.max(0, count));
     }
 
-    private boolean isBounceLandingRequired(ItemStack stack) {
-        return stack.getOrDefault(RADataComponent.UMBRELLA_BOUNCE_NEEDS_LANDING.get(), false);
-    }
-
     private void setBounceLandingRequired(ItemStack stack, boolean value) {
         stack.set(RADataComponent.UMBRELLA_BOUNCE_NEEDS_LANDING.get(), value);
     }
@@ -574,7 +563,7 @@ public class UmbrellaItem extends RARelicItem {
     }
 
     @Override
-    public boolean isBarVisible(ItemStack stack) {
+    public boolean isBarVisible(@NotNull ItemStack stack) {
         if (isShowingShieldBar(stack))
             return getShieldMaxHits(stack) > 0;
 
@@ -582,7 +571,7 @@ public class UmbrellaItem extends RARelicItem {
     }
 
     @Override
-    public int getBarWidth(ItemStack stack) {
+    public int getBarWidth(@NotNull ItemStack stack) {
         if (isShowingShieldBar(stack)) {
             var maxHits = getShieldMaxHits(stack);
 
@@ -591,7 +580,7 @@ public class UmbrellaItem extends RARelicItem {
 
             var remaining = Math.max(0, maxHits - getShieldHitCount(stack));
 
-            return Math.max(0, Math.min(13, Math.round(13F * remaining / (float) maxHits)));
+            return Math.clamp(Math.round(13F * remaining / (float) maxHits), 0, 13);
         }
 
         var maxBounces = getMaxBounces(stack);
@@ -601,7 +590,7 @@ public class UmbrellaItem extends RARelicItem {
 
         var remaining = Math.max(0, maxBounces - getBounceCount(stack));
 
-        return Math.max(0, Math.min(13, Math.round(13F * remaining / (float) maxBounces)));
+        return Math.clamp(Math.round(13F * remaining / (float) maxBounces), 0, 13);
     }
 
     @Override
@@ -610,7 +599,7 @@ public class UmbrellaItem extends RARelicItem {
     }
 
     @Override
-    public int getBarColor(ItemStack stack) {
+    public int getBarColor(@NotNull ItemStack stack) {
         return 0x51D64E;
     }
 

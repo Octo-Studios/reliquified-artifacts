@@ -30,6 +30,7 @@ import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class ObsidianSkullItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -227,7 +228,7 @@ public class ObsidianSkullItem extends RAWearableRelicItem {
             }
 
             if (ability.getRankModifierData("obsidian_skin").isEnabled()) {
-                var reduction = Math.max(0D, Math.min(1D, ability.getStatData("damage_reduction").getValue()));
+                var reduction = Math.clamp(ability.getStatData("damage_reduction").getValue(), 0D, 1D);
 
                 if (reduction > 0D) {
                     var baseDamage = event.getAmount();

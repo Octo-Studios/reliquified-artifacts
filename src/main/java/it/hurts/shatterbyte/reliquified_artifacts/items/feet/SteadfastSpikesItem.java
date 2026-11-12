@@ -28,6 +28,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingKnockBackEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class SteadfastSpikesItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -107,7 +108,7 @@ public class SteadfastSpikesItem extends RAWearableRelicItem {
     }
 
     private static double getEffectiveResistance(Player player, double baseResistance, boolean crouchUnlocked, boolean anchorUnlocked) {
-        var resistance = Math.max(0D, Math.min(1D, baseResistance));
+        var resistance = Math.clamp(baseResistance, 0D, 1D);
 
         if (crouchUnlocked && player.isCrouching())
             resistance = Math.min(1D, resistance * 2D);
@@ -157,7 +158,7 @@ public class SteadfastSpikesItem extends RAWearableRelicItem {
             if (!ability.canPlayerUse(player) || !ability.getMode().equals("enabled") || !ability.getRankModifierData("damage_resistance").isEnabled())
                 return;
 
-            var resistance = Math.max(0D, Math.min(1D, ability.getStatData("damage_resistance").getValue()));
+            var resistance = Math.clamp(ability.getStatData("damage_resistance").getValue(), 0D, 1D);
 
             if (resistance <= 0D)
                 return;

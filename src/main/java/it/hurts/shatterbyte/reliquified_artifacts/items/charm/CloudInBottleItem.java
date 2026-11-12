@@ -40,6 +40,7 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class CloudInBottleItem extends RAWearableRelicItem {
 
     @Override
@@ -213,7 +214,7 @@ public class CloudInBottleItem extends RAWearableRelicItem {
                 var whoopeeStack = EntityUtils.findEquippedCurio(player, ModItems.WHOOPEE_CUSHION.value());
 
                 if (whoopeeStack.getItem() instanceof WhoopeeCushionItem whoopee) {
-                    var chance = Math.max(0D, Math.min(1D, synergy.getStatData("chance").getValue()));
+                    var chance = Math.clamp(synergy.getStatData("chance").getValue(), 0D, 1D);
                     var triggerWhoopee = chance > 0D && player.getRandom().nextDouble() <= chance;
                     var activated = false;
 

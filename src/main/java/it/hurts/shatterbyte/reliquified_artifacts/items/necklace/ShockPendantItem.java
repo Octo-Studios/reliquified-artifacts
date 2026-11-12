@@ -29,6 +29,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
+@SuppressWarnings("resource")
 public class ShockPendantItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -174,7 +175,7 @@ public class ShockPendantItem extends RAWearableRelicItem {
                 }
 
                 if (attacker != null) {
-                    var chance = Math.max(0D, Math.min(1D, ability.getStatData("chance").getValue()));
+                    var chance = Math.clamp(ability.getStatData("chance").getValue(), 0D, 1D);
 
                     if (chance > 0D && entity.getRandom().nextDouble() <= chance) {
                         var distance = (float) Math.max(0D, ability.getStatData("distance").getValue());
@@ -205,7 +206,7 @@ public class ShockPendantItem extends RAWearableRelicItem {
                 }
 
                 if (ability.getRankModifierData("tremor").isEnabled()) {
-                    var currentChance = Math.max(0D, Math.min(1D, ability.getStatData("tremor_chance").getValue()));
+                    var currentChance = Math.clamp(ability.getStatData("tremor_chance").getValue(), 0D, 1D);
                     var currentDuration = Math.max(0D, ability.getStatData("tremor_duration").getValue());
 
                     tremorChance = Math.max(tremorChance, currentChance);

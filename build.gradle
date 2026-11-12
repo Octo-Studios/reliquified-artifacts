@@ -84,10 +84,10 @@ repositories {
         name = "ModMaven"
         url = "https://modmaven.k-4u.nl"
     }
-    maven {
+    /*maven {
         name = "OctoStudios"
-        url = uri("https://maven.octo-studios.com/releases")
-    }
+        url = uri("https://maven.octo-studios.com/releases") // times out
+    }*/
     maven { url "https://maven.architectury.dev/" }
     exclusiveContent {
         forRepository {
@@ -106,8 +106,9 @@ dependencies {
 
     implementation 'org.jetbrains:annotations:20.1.0'
 
-    implementation "it.hurts.octostudios.octolib:octolib-neoforge:0.6.0.1+1.21"
-    implementation 'top.theillusivec4.curios:curios-neoforge:9.3.1+1.21.1'
+    //implementation "it.hurts.octostudios.octolib:octolib-neoforge:0.6.0.1+1.21" // times out
+    implementation files("libs/OctoLib-NEOFORGE-0.6.2+1.21.jar")
+    implementation 'top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1'
 
     implementation "dev.architectury:architectury-neoforge:13.0.6"
 

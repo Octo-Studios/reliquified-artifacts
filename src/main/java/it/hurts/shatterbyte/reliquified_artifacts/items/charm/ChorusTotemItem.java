@@ -35,6 +35,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingHealEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class ChorusTotemItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -294,7 +295,7 @@ public class ChorusTotemItem extends RAWearableRelicItem {
 
             event.setAmount(boostedHeal);
 
-            if (bestRelic != null && extraHeal > 0F) {
+            if (extraHeal > 0F) {
                 var ability = bestRelic.getRelicData(player, bestStack).getAbilitiesData().getAbilityData("chorus");
                 ability.getStatisticData().getMetricData("recovery_healed").addValue(extraHeal);
             }

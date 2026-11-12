@@ -34,6 +34,7 @@ import top.theillusivec4.curios.api.SlotContext;
 
 import java.util.HashSet;
 
+@SuppressWarnings("resource")
 public class WhoopeeCushionItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -126,7 +127,7 @@ public class WhoopeeCushionItem extends RAWearableRelicItem {
         var wasCrouching = stack.getOrDefault(RADataComponent.TOGGLED, false);
 
         if (crouching && !wasCrouching && getCooldownTicks(stack) <= 0) {
-            var chance = Math.max(0D, Math.min(1D, ability.getStatData("chance").getValue()));
+            var chance = Math.clamp(ability.getStatData("chance").getValue(), 0D, 1D);
 
             if (chance > 0D && player.getRandom().nextDouble() <= chance)
                 activateAbility(player, stack);
@@ -197,7 +198,7 @@ public class WhoopeeCushionItem extends RAWearableRelicItem {
             var spawnCloud = true;
 
             if (ability.getRankModifierData("paralysis").isEnabled()) {
-                var cloudChance = Math.max(0D, Math.min(1D, ability.getStatData("cloud_spawn_chance").getValue()));
+                var cloudChance = Math.clamp(ability.getStatData("cloud_spawn_chance").getValue(), 0D, 1D);
                 spawnCloud = player.getRandom().nextDouble() <= cloudChance;
             }
 
@@ -300,7 +301,7 @@ public class WhoopeeCushionItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(player) || !ability.getRankModifierData("retaliation").isEnabled() || relic.getCooldownTicks(stack) > 0)
                     continue;
 
-                var value = Math.max(0D, Math.min(1D, ability.getStatData("retaliation_chance").getValue()));
+                var value = Math.clamp(ability.getStatData("retaliation_chance").getValue(), 0D, 1D);
 
                 if (value <= chance)
                     continue;
@@ -310,7 +311,7 @@ public class WhoopeeCushionItem extends RAWearableRelicItem {
                 selectedStack = stack;
             }
 
-            if (selectedRelic == null || chance <= 0D || player.getRandom().nextDouble() > chance)
+            if (selectedRelic == null || player.getRandom().nextDouble() > chance)
                 return;
 
             selectedRelic.activateAbility(player, selectedStack);

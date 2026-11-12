@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@SuppressWarnings("resource")
 public class DrinkingHatItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -121,10 +122,10 @@ public class DrinkingHatItem extends RAWearableRelicItem {
 
     @Override
     public void onUnequip(SlotContext slotContext, ItemStack newStack, ItemStack stack) {
-        if (!(slotContext.entity() instanceof Player player) || newStack.getItem() == stack.getItem())
+        if (!(slotContext.entity() instanceof Player) || newStack.getItem() == stack.getItem())
             return;
 
-        EntityUtils.removeAttribute(player, stack, ModAttributes.DRINKING_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, ModAttributes.DRINKING_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     @EventBusSubscriber

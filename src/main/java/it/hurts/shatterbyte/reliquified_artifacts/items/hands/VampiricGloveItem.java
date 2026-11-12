@@ -18,15 +18,18 @@ import it.hurts.sskirillss.relics.api.relics.abilities.stats.AbilityStatTemplate
 import it.hurts.sskirillss.relics.init.RelicsScalingModels;
 import it.hurts.sskirillss.relics.utils.EntityUtils;
 import it.hurts.sskirillss.relics.utils.MathUtils;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class VampiricGloveItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -109,7 +112,7 @@ public class VampiricGloveItem extends RAWearableRelicItem {
         if (cap <= 0D)
             removeAbsorptionCap(player, stack);
         else
-            setAbsorptionCap(player, stack, cap);
+            setAbsorptionCap(player, cap);
     }
 
     @Override
@@ -153,14 +156,18 @@ public class VampiricGloveItem extends RAWearableRelicItem {
         setLastAttackTick(stack, -1L);
     }
 
-    private void setAbsorptionCap(Player player, ItemStack stack, double cap) {
-        if (player.getAttribute(Attributes.MAX_ABSORPTION) != null)
-            EntityUtils.resetAttribute(player, stack, Attributes.MAX_ABSORPTION, (float) Math.max(0D, cap), AttributeModifier.Operation.ADD_VALUE);
+    private void setAbsorptionCap(Player player, double cap) {
+        if (player.getAttribute(Attributes.MAX_ABSORPTION) == null) return;
+        ResourceKey<Item> curioKey = ModItems.VAMPIRIC_GLOVE.getKey();
+        if (curioKey == null) return;
+        EntityUtils.resetAttribute(player, Attributes.MAX_ABSORPTION, (float) Math.max(0D, cap), AttributeModifier.Operation.ADD_VALUE, curioKey.location());
     }
 
     private void removeAbsorptionCap(Player player, ItemStack stack) {
-        if (player.getAttribute(Attributes.MAX_ABSORPTION) != null)
-            EntityUtils.removeAttribute(player, stack, Attributes.MAX_ABSORPTION, AttributeModifier.Operation.ADD_VALUE);
+        if (player.getAttribute(Attributes.MAX_ABSORPTION) == null) return;
+        ResourceKey<Item> curioKey = ModItems.VAMPIRIC_GLOVE.getKey();
+        if (curioKey == null) return;
+        EntityUtils.removeAttribute(player, Attributes.MAX_ABSORPTION, AttributeModifier.Operation.ADD_VALUE, curioKey.location());
     }
 
     private static long secondsToTicks(double seconds) {
@@ -240,7 +247,7 @@ public class VampiricGloveItem extends RAWearableRelicItem {
                     var cap = Math.max(0D, ability.getStatData("overheal_absorption_cap").getValue());
 
                     if (cap > 0D)
-                        relic.setAbsorptionCap(player, stack, cap);
+                        relic.setAbsorptionCap(player, cap);
                     else
                         relic.removeAbsorptionCap(player, stack);
                 } else {
@@ -277,7 +284,7 @@ public class VampiricGloveItem extends RAWearableRelicItem {
                 var healing = Math.max(0D, event.getNewDamage()) * healingPercent;
 
                 if (killed && ability.getRankModifierData("execution_heal").isEnabled()) {
-                    var killHeal = Math.max(0D, Math.min(1D, ability.getStatData("kill_heal").getValue()));
+                    var killHeal = Math.clamp(ability.getStatData("kill_heal").getValue(), 0D, 1D);
 
                     healing += player.getMaxHealth() * killHeal;
                 }
@@ -299,13 +306,13 @@ public class VampiricGloveItem extends RAWearableRelicItem {
             if (!bestUsesOverheal || bestOverhealCap <= 0D) {
                 result = healWithOverflow(player, bestHealing, 0D);
             } else {
-                if (bestRelic != null && !bestStack.isEmpty())
-                    bestRelic.setAbsorptionCap(player, bestStack, bestOverhealCap);
+                if (!bestStack.isEmpty())
+                    bestRelic.setAbsorptionCap(player, bestOverhealCap);
 
                 result = healWithOverflow(player, bestHealing, bestOverhealCap);
             }
 
-            if (bestRelic == null || bestStack.isEmpty())
+            if (bestStack.isEmpty())
                 return;
 
             var relicData = bestRelic.getRelicData(player, bestStack);

@@ -1,5 +1,6 @@
 package it.hurts.shatterbyte.reliquified_artifacts.items.charm;
 
+import it.hurts.sskirillss.relics.api.relics.data.AbilityData;
 import it.hurts.sskirillss.relics.items.relics.base.data.loot.LootTemplate;
 import it.hurts.sskirillss.relics.items.relics.base.data.loot.misc.LootEntries;
 import artifacts.registry.ModItems;
@@ -23,11 +24,13 @@ import it.hurts.sskirillss.relics.network.NetworkHandler;
 import it.hurts.sskirillss.relics.utils.EntityUtils;
 import it.hurts.sskirillss.relics.utils.MathUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -36,13 +39,18 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.common.NeoForgeMod;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class HeliumFlamingoItem extends RAWearableRelicItem {
 
     private static final double STATIONARY_HORIZONTAL_SPEED_SQR = 0.0016D;
     private static final double STATIONARY_VERTICAL_SPEED = 0.04D;
     private static final double STATIONARY_POSITION_DELTA_SQR = 1.0E-6D;
+
+    private static Pose lastForcedPose;
 
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -108,7 +116,7 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
             if (!player.level().isClientSide())
                 setWaterTakeoffReady(stack, false);
 
-            disableHover(player, stack, true);
+            disableHover(slotContext, stack, true);
             return;
         }
 
@@ -117,7 +125,7 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
                 setWaterTakeoffReady(stack, true);
 
             if (getWaterTakeoffReady(stack) && !getToggled(stack) && player.isInWater() && !player.isUnderWater()
-                    && getTime(stack) < getMaxHoverSeconds(player, stack) && trySetHovering(player, stack, true)) {
+                    && getTime(stack) < getMaxHoverSeconds(player, stack) && trySetHovering(slotContext, stack, true)) {
                 setWaterTakeoffReady(stack, false);
             }
 
@@ -126,21 +134,21 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
         }
 
         if (isHoverResetState(player)) {
-            disableHover(player, stack, true);
+            disableHover(slotContext, stack, true);
             return;
         }
 
         if (!getToggled(stack)) {
-            EntityUtils.removeAttribute(player, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             return;
         }
 
         if (getTime(stack) >= getMaxHoverSeconds(player, stack)) {
-            disableHover(player, stack, false);
+            disableHover(slotContext, stack, false);
             return;
         }
 
-        EntityUtils.resetAttribute(player, stack, Attributes.GRAVITY, -1F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.resetAttribute(slotContext, stack, Attributes.GRAVITY, -1F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
         player.fallDistance = 0F;
 
@@ -155,7 +163,7 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
         addTime(stack, 1);
 
         if (getTime(stack) >= getMaxHoverSeconds(player, stack))
-            disableHover(player, stack, false);
+            disableHover(slotContext, stack, false);
     }
 
     @Override
@@ -168,32 +176,32 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
         if (!player.level().isClientSide())
             setWaterTakeoffReady(stack, false);
 
-        disableHover(player, stack, true);
+        disableHover(slotContext, stack, true);
     }
 
-    public boolean trySetHovering(Player player, ItemStack stack, boolean toggled) {
-        var ability = this.getRelicData(player, stack).getAbilitiesData().getAbilityData("flying");
+    public boolean trySetHovering(SlotContext slotContext, ItemStack stack, boolean toggled) {
+        var ability = this.getRelicData(slotContext.entity(), stack).getAbilitiesData().getAbilityData("flying");
 
-        if (!ability.canPlayerUse(player)) {
-            disableHover(player, stack, true);
+        if (!ability.canPlayerUse(slotContext.entity())) {
+            disableHover(slotContext, stack, true);
             return false;
         }
 
         if (!toggled) {
             setToggled(stack, false);
             setWaterTakeoffReady(stack, false);
-            EntityUtils.removeAttribute(player, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
             return true;
         }
 
-        if (isHoverResetState(player) || getTime(stack) >= getMaxHoverSeconds(player, stack))
+        if (isHoverResetState((Player) slotContext.entity()) || getTime(stack) >= getMaxHoverSeconds((Player) slotContext.entity(), stack))
             return false;
 
         setToggled(stack, true);
         setWaterTakeoffReady(stack, false);
-        EntityUtils.resetAttribute(player, stack, Attributes.GRAVITY, -1F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-        player.fallDistance = 0F;
+        EntityUtils.resetAttribute(slotContext, stack, Attributes.GRAVITY, -1F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        slotContext.entity().fallDistance = 0F;
 
         return true;
     }
@@ -244,14 +252,14 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
         return player.onGround() || (player.isInLiquid() && !canHoverFromLiquidSurface(player)) || player.isFallFlying() || player.getAbilities().flying;
     }
 
-    private void disableHover(Player player, ItemStack stack, boolean resetTime) {
+    private void disableHover(SlotContext slotContext, ItemStack stack, boolean resetTime) {
         setToggled(stack, false);
 
         if (resetTime)
             setTime(stack, 0);
 
-        EntityUtils.removeAttribute(player, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-        EntityUtils.removeAttribute(player, stack, NeoForgeMod.SWIM_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, NeoForgeMod.SWIM_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     public boolean getToggled(ItemStack stack) {
@@ -282,6 +290,12 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
         stack.set(RADataComponent.TIME, Math.max(val, 0));
     }
 
+    private static void setPose(@NotNull Player player, @Nullable Pose pose) {
+        if (lastForcedPose != player.getForcedPose() || pose == player.getForcedPose()) return;
+        player.setForcedPose(pose);
+        lastForcedPose = pose;
+    }
+
     @EventBusSubscriber(value = Dist.CLIENT)
     public static class HeliumFlamingoClientEvent {
         private static final int STOP_DOUBLE_PRESS_WINDOW_TICKS = 10;
@@ -298,7 +312,7 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
             var stack = EntityUtils.findEquippedCurio(player, ModItems.HELIUM_FLAMINGO.value());
 
             if (!(stack.getItem() instanceof HeliumFlamingoItem relic) || !relic.isHovering(player, stack))
-                player.setForcedPose(null);
+                setPose(player, null);
         }
 
         @SubscribeEvent
@@ -366,20 +380,22 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
 
             if (!(stack.getItem() instanceof HeliumFlamingoItem relic)) {
                 if (player.getForcedPose() == Pose.SWIMMING)
-                    player.setForcedPose(null);
+                    setPose(player, null);
 
                 return;
             }
 
-            var ability = relic.getRelicData(player, stack).getAbilitiesData().getAbilityData("flying");
+            AbilityData ability = relic.getRelicData(player, stack).getAbilitiesData().getAbilityData("flying");
 
             if (!ability.canPlayerUse(player) || !relic.isHovering(player, stack)) {
                 event.setResult(EventResult.PASS);
 
-                EntityUtils.removeAttribute(player, stack, NeoForgeMod.SWIM_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-                EntityUtils.removeAttribute(player, stack, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                ResourceKey<Item> curioKey = ModItems.HELIUM_FLAMINGO.getKey();
+                if (curioKey == null) return;
+                EntityUtils.removeAttribute(player, NeoForgeMod.SWIM_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, curioKey.location());
+                EntityUtils.removeAttribute(player, Attributes.GRAVITY, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, curioKey.location());
 
-                player.setForcedPose(null);
+                setPose(player, null);
 
                 return;
             }
@@ -388,9 +404,12 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
 
             var speedBonus = Math.max(0D, ability.getStatData("speed_bonus").getValue());
 
-            EntityUtils.applyAttribute(player, stack, NeoForgeMod.SWIM_SPEED, (float) speedBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            ResourceKey<Item> curioKey = ModItems.HELIUM_FLAMINGO.getKey();
+            if (curioKey == null) return;
 
-            player.setForcedPose(Pose.SWIMMING);
+            EntityUtils.applyAttribute(player, NeoForgeMod.SWIM_SPEED, (float) speedBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, curioKey.location());
+
+            setPose(player, Pose.SWIMMING);
         }
 
         @SubscribeEvent
@@ -432,7 +451,7 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
 
             event.setAmount(boostedDamage);
 
-            if (bestRelic != null && extraDamage > 0F) {
+            if (extraDamage > 0F) {
                 var ability = bestRelic.getRelicData(player, bestStack).getAbilitiesData().getAbilityData("flying");
                 ability.getStatisticData().getMetricData("aerial_archery_bonus_damage").addValue(extraDamage);
             }
@@ -456,7 +475,7 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(player) || !ability.getRankModifierData("aerial_guard").isEnabled())
                     continue;
 
-                var localReduction = Math.max(0D, Math.min(1D, ability.getStatData("resistance").getValue()));
+                var localReduction = Math.clamp(ability.getStatData("resistance").getValue(), 0D, 1D);
 
                 if (localReduction > reduction) {
                     reduction = localReduction;
@@ -474,7 +493,7 @@ public class HeliumFlamingoItem extends RAWearableRelicItem {
 
             event.setAmount(reducedDamage);
 
-            if (bestRelic != null && blockedDamage > 0F) {
+            if (blockedDamage > 0F) {
                 var ability = bestRelic.getRelicData(player, bestStack).getAbilitiesData().getAbilityData("flying");
                 ability.getStatisticData().getMetricData("aerial_guard_damage_reduced").addValue(blockedDamage);
             }

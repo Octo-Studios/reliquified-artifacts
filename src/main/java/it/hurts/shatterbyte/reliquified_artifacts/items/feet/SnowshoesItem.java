@@ -29,6 +29,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class SnowshoesItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -74,7 +75,7 @@ public class SnowshoesItem extends RAWearableRelicItem {
         if (!ability.canPlayerUse(player)) {
             setLingerTicks(stack, 0);
             setSpeedCharge(stack, 0D);
-            EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
             return;
         }
@@ -93,8 +94,6 @@ public class SnowshoesItem extends RAWearableRelicItem {
             if (ticks > 0) {
                 setLingerTicks(stack, ticks - 1);
                 active = true;
-            } else {
-                active = false;
             }
         } else {
             setLingerTicks(stack, 0);
@@ -116,9 +115,9 @@ public class SnowshoesItem extends RAWearableRelicItem {
         var speedBonus = Math.max(0D, ability.getStatData("speed_bonus").getValue()) * speedCharge;
 
         if (speedBonus <= 0D)
-            EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         else
-            EntityUtils.resetAttribute(player, stack, Attributes.MOVEMENT_SPEED, (float) speedBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, (float) speedBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     @Override
@@ -135,12 +134,12 @@ public class SnowshoesItem extends RAWearableRelicItem {
     public void onUnequip(SlotContext slotContext, ItemStack newStack, ItemStack stack) {
         super.onUnequip(slotContext, newStack, stack);
 
-        if (stack.getItem() == newStack.getItem() || !(slotContext.entity() instanceof Player player))
+        if (stack.getItem() == newStack.getItem() || !(slotContext.entity() instanceof Player))
             return;
 
         setLingerTicks(stack, 0);
         setSpeedCharge(stack, 0D);
-        EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     private static boolean isOnSnowTerrain(Player player) {
@@ -165,11 +164,11 @@ public class SnowshoesItem extends RAWearableRelicItem {
     }
 
     private double getSpeedCharge(ItemStack stack) {
-        return Math.max(0D, Math.min(1D, stack.getOrDefault(RADataComponent.SNOWSHOES_SPEED_CHARGE.get(), 0D)));
+        return Math.clamp(stack.getOrDefault(RADataComponent.SNOWSHOES_SPEED_CHARGE.get(), 0D), 0D, 1D);
     }
 
     private void setSpeedCharge(ItemStack stack, double charge) {
-        stack.set(RADataComponent.SNOWSHOES_SPEED_CHARGE.get(), Math.max(0D, Math.min(1D, charge)));
+        stack.set(RADataComponent.SNOWSHOES_SPEED_CHARGE.get(), Math.clamp(charge, 0D, 1D));
     }
 
     @EventBusSubscriber(modid = ReliquifiedArtifacts.MODID)

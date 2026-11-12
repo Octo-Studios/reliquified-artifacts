@@ -28,6 +28,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.TradeWithVillagerEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class VillagerHatItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -170,12 +171,12 @@ public class VillagerHatItem extends RAWearableRelicItem {
                 return;
 
             if (ability.getRankModifierData("protection").isEnabled()) {
-                var reductionPerGolem = Math.max(0D, Math.min(1D, ability.getStatData("damage_reduction_per_golem").getValue()));
+                var reductionPerGolem = Math.clamp(ability.getStatData("damage_reduction_per_golem").getValue(), 0D, 1D);
                 var radius = Math.max(0D, ability.getStatData("radius").getValue());
-                var maxReduction = Math.max(0D, Math.min(1D, ability.getStatData("max_damage_reduction").getValue()));
+                var maxReduction = Math.clamp(ability.getStatData("max_damage_reduction").getValue(), 0D, 1D);
 
                 if (reductionPerGolem > 0D && radius > 0D && maxReduction > 0D) {
-                    var golems = player.level().getEntitiesOfClass(IronGolem.class, player.getBoundingBox().inflate(radius), golem -> golem.isAlive()).size();
+                    var golems = player.level().getEntitiesOfClass(IronGolem.class, player.getBoundingBox().inflate(radius), LivingEntity::isAlive).size();
                     var reduction = Math.min(maxReduction, reductionPerGolem * golems);
 
                     if (reduction > 0D) {
@@ -227,7 +228,7 @@ public class VillagerHatItem extends RAWearableRelicItem {
 
             var multicast = Math.max(0, (int) MathUtils.round(ability.getStatData("multicast").getValue(), 0));
 
-            if (multicast <= 0)
+            if (multicast == 0)
                 return;
 
             var casts = MathUtils.multicast(player.getRandom(), 0.5D, multicast);

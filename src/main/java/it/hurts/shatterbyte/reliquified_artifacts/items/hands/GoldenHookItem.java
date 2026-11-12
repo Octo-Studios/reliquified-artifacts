@@ -18,6 +18,7 @@ import it.hurts.sskirillss.relics.init.RelicsScalingModels;
 import it.hurts.sskirillss.relics.utils.EntityUtils;
 import it.hurts.sskirillss.relics.utils.MathUtils;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -29,6 +30,7 @@ import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
+@SuppressWarnings("resource")
 public class GoldenHookItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -148,7 +150,7 @@ public class GoldenHookItem extends RAWearableRelicItem {
         var radiusSq = radius * radius;
         var pickedOrbs = 0;
 
-        for (var orb : player.level().getEntitiesOfClass(ExperienceOrb.class, player.getBoundingBox().inflate(radius), entity -> entity.isAlive())) {
+        for (var orb : player.level().getEntitiesOfClass(ExperienceOrb.class, player.getBoundingBox().inflate(radius), Entity::isAlive)) {
             if (orb.distanceToSqr(player) > radiusSq)
                 continue;
 
@@ -263,7 +265,7 @@ public class GoldenHookItem extends RAWearableRelicItem {
                 }
 
                 if (ability.getRankModifierData("disarm").isEnabled()) {
-                    var value = Math.max(0D, Math.min(1D, ability.getStatData("steal_chance").getValue()));
+                    var value = Math.clamp(ability.getStatData("steal_chance").getValue(), 0D, 1D);
 
                     if (stealRelic == null || value > stealChance) {
                         stealChance = value;
@@ -304,11 +306,11 @@ public class GoldenHookItem extends RAWearableRelicItem {
                     }
                 }
 
-                if (pullRelic != null && pulledTargets > 0)
+                if (pulledTargets > 0)
                     pullRelic.getRelicData(player, pullStack).getLevelingData().addExperience("hook", "crowd_pull_target", pulledTargets);
             }
 
-            if (stealChance > 0D && stealRelic != null && event.getEntity() instanceof LivingEntity target && player.getRandom().nextDouble() <= stealChance
+            if (stealChance > 0D && event.getEntity() instanceof LivingEntity target && player.getRandom().nextDouble() <= stealChance
                     && tryStealItem(player, target)) {
                 var relicData = stealRelic.getRelicData(player, stealStack);
 

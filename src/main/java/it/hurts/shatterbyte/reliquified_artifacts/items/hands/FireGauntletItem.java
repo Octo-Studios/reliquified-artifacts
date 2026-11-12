@@ -26,6 +26,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
 import java.util.Comparator;
 
+@SuppressWarnings("resource")
 public class FireGauntletItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -247,7 +248,7 @@ public class FireGauntletItem extends RAWearableRelicItem {
                     continue;
 
                 if (ability.getRankModifierData("burning_damage").isEnabled()) {
-                    var value = Math.max(0D, Math.min(1D, ability.getStatData("burning_damage_bonus").getValue()));
+                    var value = Math.clamp(ability.getStatData("burning_damage_bonus").getValue(), 0D, 1D);
 
                     burningDamageBonus = Math.max(burningDamageBonus, value);
                 }
@@ -271,7 +272,7 @@ public class FireGauntletItem extends RAWearableRelicItem {
             if (burningDamageBonus > 0D)
                 event.setAmount((float) (event.getAmount() * (1D + burningDamageBonus)));
 
-            if (spreadRadius <= 0D || spreadFireDuration <= 0D || !wasOnFire)
+            if (spreadRadius <= 0D || spreadFireDuration <= 0D)
                 return;
 
             var maxDistanceSq = spreadRadius * spreadRadius;
@@ -335,7 +336,7 @@ public class FireGauntletItem extends RAWearableRelicItem {
                 sparkFireDuration = Math.max(sparkFireDuration, fireDuration);
             }
 
-            if (sparkCount <= 0 || sparkDamage <= 0D || sparkStack.isEmpty())
+            if (sparkCount == 0 || sparkDamage <= 0D || sparkStack.isEmpty())
                 return;
 
             var targets = level.getEntitiesOfClass(LivingEntity.class, entity.getBoundingBox().inflate(10D), target -> target.isAlive() && target != owner && target != entity)

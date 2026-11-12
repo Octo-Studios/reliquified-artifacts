@@ -35,6 +35,7 @@ import top.theillusivec4.curios.api.SlotContext;
 import java.util.HashMap;
 import java.util.Map;
 
+@SuppressWarnings("resource")
 public class RootedBootsItem extends RAWearableRelicItem {
     private static final Map<ResourceKey<Level>, Map<BlockPos, Long>> PENDING_GRASS_RESTORE = new HashMap<>();
 

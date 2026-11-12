@@ -18,6 +18,7 @@ import it.hurts.sskirillss.relics.api.relics.abilities.stats.AbilityStatTemplate
 import it.hurts.sskirillss.relics.init.RelicsScalingModels;
 import it.hurts.sskirillss.relics.utils.EntityUtils;
 import it.hurts.sskirillss.relics.utils.MathUtils;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -35,6 +36,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+@SuppressWarnings("resource")
 public class AntidoteVesselItem extends RAWearableRelicItem {
 
     private static final ThreadLocal<Boolean> INTERNAL_EFFECT_APPLICATION = ThreadLocal.withInitial(() -> false);
@@ -181,7 +183,7 @@ public class AntidoteVesselItem extends RAWearableRelicItem {
 
     @Nullable
     private static ResourceLocation getEffectId(MobEffectInstance effect) {
-        return effect.getEffect().unwrapKey().map(key -> key.location()).orElse(null);
+        return effect.getEffect().unwrapKey().map(ResourceKey::location).orElse(null);
     }
 
     private static int countNegativeEffects(Player player) {
@@ -241,7 +243,7 @@ public class AntidoteVesselItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(player))
                     continue;
 
-                var localDurationReduction = Math.max(0D, Math.min(1D, ability.getStatData("duration_reduction").getValue()));
+                var localDurationReduction = Math.clamp(ability.getStatData("duration_reduction").getValue(), 0D, 1D);
 
                 if (localDurationReduction >= durationReduction || bestRelic == null) {
                     durationReduction = localDurationReduction;
@@ -265,10 +267,8 @@ public class AntidoteVesselItem extends RAWearableRelicItem {
             event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
 
             if (blockedByImmunity) {
-                if (recoveryRelic != null) {
-                    var ability = recoveryRelic.getRelicData(player, recoveryStack).getAbilitiesData().getAbilityData("antidote");
-                    ability.getStatisticData().getMetricData("recovery_dodges").addValue(1D);
-                }
+                var ability = recoveryRelic.getRelicData(player, recoveryStack).getAbilitiesData().getAbilityData("antidote");
+                ability.getStatisticData().getMetricData("recovery_dodges").addValue(1D);
 
                 return;
             }
@@ -284,17 +284,16 @@ public class AntidoteVesselItem extends RAWearableRelicItem {
 
             applyEffectInternally(player, adjusted, event.getEffectSource());
 
-            if (bestRelic != null) {
-                var relicData = bestRelic.getRelicData(player, bestStack);
-                var ability = relicData.getAbilitiesData().getAbilityData("antidote");
-                var reducedTicks = Math.max(0, originalDuration - duration);
+            var relicData = bestRelic.getRelicData(player, bestStack);
+            var ability = relicData.getAbilitiesData().getAbilityData("antidote");
+            var reducedTicks = Math.max(0, originalDuration - duration);
 
-                relicData.getLevelingData().addExperience("antidote", "negative_effect", 1D);
-                ability.getStatisticData().getMetricData("negative_effects_received").addValue(1D);
+            relicData.getLevelingData().addExperience("antidote", "negative_effect", 1D);
+            ability.getStatisticData().getMetricData("negative_effects_received").addValue(1D);
 
-                if (reducedTicks > 0)
-                    ability.getStatisticData().getMetricData("reduced_effect_duration").addValue(reducedTicks / 20D);
-            }
+            if (reducedTicks > 0)
+                ability.getStatisticData().getMetricData("reduced_effect_duration").addValue(reducedTicks / 20D);
+
         }
 
         @SubscribeEvent
@@ -355,8 +354,8 @@ public class AntidoteVesselItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(player) || !ability.getRankModifierData("resilience").isEnabled())
                     continue;
 
-                var perEffect = Math.max(0D, Math.min(1D, ability.getStatData("resistance_per_effect").getValue()));
-                var value = Math.max(0D, Math.min(1D, perEffect * negativeEffects));
+                var perEffect = Math.clamp(ability.getStatData("resistance_per_effect").getValue(), 0D, 1D);
+                var value = Math.clamp(perEffect * negativeEffects, 0D, 1D);
 
                 if (value > reduction) {
                     reduction = value;
@@ -374,7 +373,7 @@ public class AntidoteVesselItem extends RAWearableRelicItem {
 
             event.setAmount(reducedDamage);
 
-            if (bestRelic != null && blockedDamage > 0F) {
+            if (blockedDamage > 0F) {
                 var ability = bestRelic.getRelicData(player, bestStack).getAbilitiesData().getAbilityData("antidote");
                 ability.getStatisticData().getMetricData("damage_reduced").addValue(blockedDamage);
             }

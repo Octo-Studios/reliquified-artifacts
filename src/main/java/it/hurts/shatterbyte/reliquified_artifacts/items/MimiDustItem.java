@@ -3,6 +3,7 @@ package it.hurts.shatterbyte.reliquified_artifacts.items;
 import artifacts.entity.MimicEntity;
 import artifacts.registry.ModEntityTypes;
 import it.hurts.shatterbyte.reliquified_artifacts.handlers.MimicHandler;
+import it.hurts.shatterbyte.reliquified_artifacts.init.RAItems;
 import it.hurts.sskirillss.relics.init.RelicsCreativeTabs;
 import it.hurts.sskirillss.relics.items.misc.CreativeContentConstructor;
 import it.hurts.sskirillss.relics.items.misc.ICreativeTabContent;
@@ -10,6 +11,7 @@ import it.hurts.sskirillss.relics.utils.EntityUtils;
 import it.hurts.sskirillss.relics.utils.ParticleUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionResult;
@@ -19,6 +21,7 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.util.List;
@@ -30,7 +33,7 @@ public class MimiDustItem extends Item implements ICreativeTabContent {
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext context) {
+    public @NotNull InteractionResult useOn(UseOnContext context) {
         var level = context.getLevel();
 
         if (level.isClientSide())
@@ -67,8 +70,10 @@ public class MimiDustItem extends Item implements ICreativeTabContent {
 
         var multiplier = (float) Math.pow(count, 1.7);
 
-        EntityUtils.applyAttribute(mimic, ItemStack.EMPTY, Attributes.ATTACK_DAMAGE, multiplier, AttributeModifier.Operation.ADD_VALUE);
-        EntityUtils.applyAttribute(mimic, ItemStack.EMPTY, Attributes.MAX_HEALTH, multiplier, AttributeModifier.Operation.ADD_VALUE);
+        ResourceLocation location = RAItems.MIMI_DUST.getId();
+
+        EntityUtils.applyAttribute(mimic, Attributes.ATTACK_DAMAGE, multiplier, AttributeModifier.Operation.ADD_VALUE, location);
+        EntityUtils.applyAttribute(mimic, Attributes.MAX_HEALTH, multiplier, AttributeModifier.Operation.ADD_VALUE, location);
 
         mimic.setHealth(mimic.getMaxHealth());
 
@@ -89,7 +94,7 @@ public class MimiDustItem extends Item implements ICreativeTabContent {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(@NotNull ItemStack stack, @NotNull TooltipContext tooltipContext, List<Component> tooltip, @NotNull TooltipFlag flag) {
         tooltip.add(Component.empty());
 
         tooltip.add(Component.translatable("tooltip.reliquified_artifacts.mimi_dust").withStyle(ChatFormatting.DARK_PURPLE));

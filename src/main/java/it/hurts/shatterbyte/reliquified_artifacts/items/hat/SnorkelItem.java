@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@SuppressWarnings("resource")
 public class SnorkelItem extends RAWearableRelicItem {
     private static final Map<UUID, Integer> LAST_UNDERWATER_AIR = new HashMap<>();
 
@@ -258,7 +259,7 @@ public class SnorkelItem extends RAWearableRelicItem {
             if (!ability.canPlayerUse(player) || !ability.getRankModifierData("resistance").isEnabled())
                 return;
 
-            var reduction = Math.max(0D, Math.min(1D, ability.getStatData("drowning_resistance").getValue()));
+            var reduction = Math.clamp(ability.getStatData("drowning_resistance").getValue(), 0D, 1D);
 
             if (reduction <= 0D)
                 return;

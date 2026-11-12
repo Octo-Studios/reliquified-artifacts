@@ -33,6 +33,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class ScarfOfInvisibilityItem extends RAWearableRelicItem {
     private static final double STILL_HORIZONTAL_THRESHOLD = 1.0E-4D;
 

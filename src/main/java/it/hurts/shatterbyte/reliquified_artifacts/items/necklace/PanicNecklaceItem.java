@@ -31,6 +31,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class PanicNecklaceItem extends RAWearableRelicItem {
     private static final double SMOOTH_FACTOR = 0.12D;
     private static final double EPSILON = 0.0005D;
@@ -104,12 +105,12 @@ public class PanicNecklaceItem extends RAWearableRelicItem {
     public void onUnequip(SlotContext slotContext, ItemStack newStack, ItemStack stack) {
         super.onUnequip(slotContext, newStack, stack);
 
-        if (stack.getItem() == newStack.getItem() || !(slotContext.entity() instanceof Player player))
+        if (stack.getItem() == newStack.getItem() || !(slotContext.entity() instanceof Player))
             return;
 
         setSpeedBonus(stack, 0D);
-        EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
-        EntityUtils.removeAttribute(player, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     @Override
@@ -143,21 +144,21 @@ public class PanicNecklaceItem extends RAWearableRelicItem {
         setSpeedBonus(stack, nextBonus);
 
         if (nextBonus <= EPSILON)
-            EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
         else
-            EntityUtils.resetAttribute(player, stack, Attributes.MOVEMENT_SPEED, (float) nextBonus, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, (float) nextBonus, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
 
         if (!ability.canPlayerUse(player) || !ability.getRankModifierData("frenzy").isEnabled()) {
-            EntityUtils.removeAttribute(player, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             return;
         }
 
         var attackSpeed = Math.max(0D, ability.getStatData("attack_speed").getValue()) * totalThreats;
 
         if (attackSpeed <= EPSILON)
-            EntityUtils.removeAttribute(player, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.ATTACK_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         else
-            EntityUtils.resetAttribute(player, stack, Attributes.ATTACK_SPEED, (float) attackSpeed, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.ATTACK_SPEED, (float) attackSpeed, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     private double getSpeedBonus(ItemStack stack) {
@@ -246,7 +247,7 @@ public class PanicNecklaceItem extends RAWearableRelicItem {
                 if (hasThreatInView(player, Math.max(1D, ability.getStatData("radius").getValue())))
                     continue;
 
-                var value = Math.max(0D, Math.min(1D, ability.getStatData("resistance").getValue()));
+                var value = Math.clamp(ability.getStatData("resistance").getValue(), 0D, 1D);
 
                 if (value > resistance) {
                     resistance = value;
@@ -264,7 +265,7 @@ public class PanicNecklaceItem extends RAWearableRelicItem {
 
             event.setAmount(reducedDamage);
 
-            if (resistanceRelic != null && absorbed > 0F) {
+            if (absorbed > 0F) {
                 var ability = resistanceRelic.getRelicData(player, resistanceStack).getAbilitiesData().getAbilityData("panic");
                 ability.getStatisticData().getMetricData("absorbed_damage").addValue(absorbed);
             }
@@ -316,9 +317,6 @@ public class PanicNecklaceItem extends RAWearableRelicItem {
 
                 if (threat instanceof Mob)
                     healingRelic.getRelicData(player, healingStack).getLevelingData().addExperience("panic", "targeted_kill", 1D);
-
-                if (heal <= 0D)
-                    continue;
 
                 var beforeHealth = player.getHealth();
 

@@ -29,6 +29,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class RunningShoesItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -90,8 +91,8 @@ public class RunningShoesItem extends RAWearableRelicItem {
 
         if (!ability.canPlayerUse(player)) {
             setCharge(stack, 0D);
-            EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-            EntityUtils.removeAttribute(player, stack, Attributes.STEP_HEIGHT, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.STEP_HEIGHT, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
             return;
         }
@@ -126,19 +127,19 @@ public class RunningShoesItem extends RAWearableRelicItem {
         var speedBonus = Math.max(0D, ability.getStatData("max_speed_bonus").getValue()) * charge;
 
         if (speedBonus <= 0D)
-            EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         else
-            EntityUtils.resetAttribute(player, stack, Attributes.MOVEMENT_SPEED, (float) speedBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, (float) speedBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
         if (ability.getRankModifierData("step_up").isEnabled()) {
             var stepBonus = Math.max(0D, ability.getStatData("max_step_bonus").getValue()) * charge;
 
             if (stepBonus <= 0D)
-                EntityUtils.removeAttribute(player, stack, Attributes.STEP_HEIGHT, AttributeModifier.Operation.ADD_VALUE);
+                EntityUtils.removeAttribute(slotContext, stack, Attributes.STEP_HEIGHT, AttributeModifier.Operation.ADD_VALUE);
             else
-                EntityUtils.resetAttribute(player, stack, Attributes.STEP_HEIGHT, (float) stepBonus, AttributeModifier.Operation.ADD_VALUE);
+                EntityUtils.resetAttribute(slotContext, stack, Attributes.STEP_HEIGHT, (float) stepBonus, AttributeModifier.Operation.ADD_VALUE);
         } else {
-            EntityUtils.removeAttribute(player, stack, Attributes.STEP_HEIGHT, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.STEP_HEIGHT, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         }
 
         if (ability.getRankModifierData("immortality").isEnabled() && running && charge >= 0.999D) {
@@ -153,12 +154,12 @@ public class RunningShoesItem extends RAWearableRelicItem {
     public void onUnequip(SlotContext slotContext, ItemStack newStack, ItemStack stack) {
         super.onUnequip(slotContext, newStack, stack);
 
-        if (stack.getItem() == newStack.getItem() || !(slotContext.entity() instanceof Player player))
+        if (stack.getItem() == newStack.getItem() || !(slotContext.entity() instanceof Player))
             return;
 
         setCharge(stack, 0D);
-        EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-        EntityUtils.removeAttribute(player, stack, Attributes.STEP_HEIGHT, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.STEP_HEIGHT, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     private boolean isRunning(Player player) {
@@ -166,11 +167,11 @@ public class RunningShoesItem extends RAWearableRelicItem {
     }
 
     private double getCharge(ItemStack stack) {
-        return Math.max(0D, Math.min(1D, stack.getOrDefault(RADataComponent.RUNNING_SHOES_CHARGE.get(), 0D)));
+        return Math.clamp(stack.getOrDefault(RADataComponent.RUNNING_SHOES_CHARGE.get(), 0D), 0D, 1D);
     }
 
     private void setCharge(ItemStack stack, double value) {
-        stack.set(RADataComponent.RUNNING_SHOES_CHARGE.get(), Math.max(0D, Math.min(1D, value)));
+        stack.set(RADataComponent.RUNNING_SHOES_CHARGE.get(), Math.clamp(value, 0D, 1D));
     }
 
     @EventBusSubscriber(modid = ReliquifiedArtifacts.MODID)
@@ -190,7 +191,7 @@ public class RunningShoesItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(player) || !ability.getRankModifierData("jump_boost").isEnabled() || !relic.isRunning(player))
                     continue;
 
-                var bonus = Math.max(0D, Math.min(1D, ability.getStatData("jump_charge_bonus").getValue()));
+                var bonus = Math.clamp(ability.getStatData("jump_charge_bonus").getValue(), 0D, 1D);
 
                 if (bonus <= 0D)
                     continue;

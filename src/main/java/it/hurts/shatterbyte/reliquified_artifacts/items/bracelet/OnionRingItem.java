@@ -81,6 +81,7 @@ public class OnionRingItem extends RAWearableRelicItem {
     }
 
     @Override
+    @SuppressWarnings("resource")
     public void curioTick(SlotContext slotContext, ItemStack stack) {
         if (!(slotContext.entity() instanceof Player player) || player.level().isClientSide())
             return;
@@ -174,6 +175,7 @@ public class OnionRingItem extends RAWearableRelicItem {
         }
 
         @SubscribeEvent
+        @SuppressWarnings("resource")
         public static void onUseItemFinish(LivingEntityUseItemEvent.Finish event) {
             if (!(event.getEntity() instanceof Player player) || player.level().isClientSide())
                 return;
@@ -202,6 +204,7 @@ public class OnionRingItem extends RAWearableRelicItem {
         }
 
         @SubscribeEvent
+        @SuppressWarnings("resource")
         public static void onBlockBreak(BlockEvent.BreakEvent event) {
             var player = event.getPlayer();
 
@@ -237,7 +240,7 @@ public class OnionRingItem extends RAWearableRelicItem {
                 if (!ability.getRankModifierData("sustenance").isEnabled())
                     continue;
 
-                var value = Math.max(0D, Math.min(1D, ability.getStatData("hunger_restore_chance").getValue()));
+                var value = Math.clamp(ability.getStatData("hunger_restore_chance").getValue(), 0D, 1D);
 
                 if (sustenanceRelic == null || value > chance) {
                     chance = value;
@@ -256,7 +259,7 @@ public class OnionRingItem extends RAWearableRelicItem {
                     relicData.getLevelingData().addExperience("hunger_mining", "mined_block", 1D);
             }
 
-            if (chance <= 0D || sustenanceRelic == null || player.getRandom().nextDouble() > chance)
+            if (chance <= 0D || player.getRandom().nextDouble() > chance)
                 return;
 
             var foodData = player.getFoodData();
@@ -266,7 +269,7 @@ public class OnionRingItem extends RAWearableRelicItem {
 
             var restoredHunger = Math.max(0, foodData.getFoodLevel() - beforeHunger);
 
-            if (restoredHunger <= 0)
+            if (restoredHunger == 0)
                 return;
 
             var relicData = sustenanceRelic.getRelicData(player, sustenanceStack);

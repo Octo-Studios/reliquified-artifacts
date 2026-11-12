@@ -12,7 +12,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
-@EventBusSubscriber(modid = ReliquifiedArtifacts.MODID, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = ReliquifiedArtifacts.MODID)
 public class NetworkHandler {
     @SubscribeEvent
     public static void onRegisterPayloadHandler(final RegisterPayloadHandlersEvent event) {

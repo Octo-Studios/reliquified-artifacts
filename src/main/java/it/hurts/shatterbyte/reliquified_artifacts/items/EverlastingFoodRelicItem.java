@@ -3,18 +3,13 @@ package it.hurts.shatterbyte.reliquified_artifacts.items;
 import it.hurts.shatterbyte.reliquified_artifacts.ReliquifiedArtifacts;
 import it.hurts.shatterbyte.reliquified_artifacts.init.RADataComponent;
 import it.hurts.shatterbyte.reliquified_artifacts.items.base.RARelicItem;
-import it.hurts.sskirillss.relics.init.RelicsCreativeTabs;
-import it.hurts.sskirillss.relics.items.misc.CreativeContentConstructor;
-import it.hurts.sskirillss.relics.items.relics.base.RelicItem;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
@@ -22,11 +17,9 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
-import top.theillusivec4.curios.api.SlotContext;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-
+@SuppressWarnings("resource")
 public abstract class EverlastingFoodRelicItem extends RARelicItem {
     protected EverlastingFoodRelicItem(FoodProperties foodProperties) {
         super(new Item.Properties()
@@ -38,23 +31,15 @@ public abstract class EverlastingFoodRelicItem extends RARelicItem {
     }
 
     @Override
-    public void gatherCreativeTabContent(CreativeContentConstructor constructor) {
-        constructor.entry(RelicsCreativeTabs.RELICS_TAB.get(), CreativeModeTab.TabVisibility.PARENT_TAB_ONLY, this);
-    }
-
-    @Override
-    public String getConfigRoute() {
-        return ReliquifiedArtifacts.MODID;
-    }
-
-    @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        var stack = player.getItemInHand(hand);
+    public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, Player player, @NotNull InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        FoodProperties foodProperties = stack.getFoodProperties(player);
+        if (foodProperties == null) return InteractionResultHolder.fail(stack);
 
         if (isExhausted(player, stack))
             return InteractionResultHolder.fail(stack);
 
-        if (!player.canEat(stack.getFoodProperties(player).canAlwaysEat()))
+        if (!player.canEat(foodProperties.canAlwaysEat()))
             return InteractionResultHolder.fail(stack);
 
         player.startUsingItem(hand);
@@ -63,7 +48,7 @@ public abstract class EverlastingFoodRelicItem extends RARelicItem {
     }
 
     @Override
-    public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity livingEntity) {
+    public @NotNull ItemStack finishUsingItem(ItemStack stack, @NotNull Level level, @NotNull LivingEntity livingEntity) {
         if (stack.has(DataComponents.FOOD))
             livingEntity.eat(level, stack.copy());
 
@@ -101,7 +86,7 @@ public abstract class EverlastingFoodRelicItem extends RARelicItem {
         var consumeDurability = true;
 
         if (ability.canPlayerUse(livingEntity) && ability.getRankModifierData("preservation").isEnabled()) {
-            var chance = Math.max(0D, Math.min(1D, ability.getStatData("preservation_chance").getValue()));
+            var chance = Math.clamp(ability.getStatData("preservation_chance").getValue(), 0D, 1D);
 
             if (chance > 0D)
                 consumeDurability = livingEntity.getRandom().nextDouble() > chance;
@@ -119,7 +104,7 @@ public abstract class EverlastingFoodRelicItem extends RARelicItem {
     }
 
     @Override
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
+    public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
 
         if (level.isClientSide || !stack.isDamageableItem())
@@ -138,7 +123,7 @@ public abstract class EverlastingFoodRelicItem extends RARelicItem {
         var regenerationTicks = getRegenerationTicks(livingEntity, stack);
         var timer = Math.max(0, stack.getOrDefault(RADataComponent.EVERLASTING_FOOD_REGEN_TICKS.get(), regenerationTicks));
 
-        if (timer <= 0)
+        if (timer == 0)
             timer = regenerationTicks;
 
         timer--;
@@ -173,7 +158,7 @@ public abstract class EverlastingFoodRelicItem extends RARelicItem {
         var ability = this.getRelicData(livingEntity, stack).getAbilitiesData().getAbilityData("meal");
 
         if (ability.canPlayerUse(livingEntity) && ability.getRankModifierData("quick_meal").isEnabled()) {
-            var speed = Math.max(0D, Math.min(0.95D, ability.getStatData("consume_speed").getValue()));
+            var speed = Math.clamp(ability.getStatData("consume_speed").getValue(), 0D, 0.95D);
 
             if (speed > 0D)
                 durationTicks = Math.max(1, (int) Math.round(durationTicks / (1D + speed)));
@@ -217,7 +202,7 @@ public abstract class EverlastingFoodRelicItem extends RARelicItem {
             if (!ability.canPlayerUse(event.getEntity()) || !ability.getRankModifierData("quick_meal").isEnabled())
                 return;
 
-            var speed = Math.max(0D, Math.min(0.95D, ability.getStatData("consume_speed").getValue()));
+            var speed = Math.clamp(ability.getStatData("consume_speed").getValue(), 0D, 0.95D);
 
             if (speed <= 0D)
                 return;

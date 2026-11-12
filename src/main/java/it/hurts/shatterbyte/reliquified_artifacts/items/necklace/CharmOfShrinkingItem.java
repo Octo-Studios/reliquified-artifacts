@@ -30,6 +30,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class CharmOfShrinkingItem extends RAWearableRelicItem {
     private static final ResourceLocation SCALE_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath(ReliquifiedArtifacts.MODID, "charm_of_shrinking_scale");
 
@@ -167,7 +168,7 @@ public class CharmOfShrinkingItem extends RAWearableRelicItem {
             return;
 
         var chancePerSize = Math.max(0D, ability.getStatData("target_loss_chance_per_size").getValue());
-        var chance = Math.max(0D, Math.min(1D, (1D - newScale) * chancePerSize));
+        var chance = Math.clamp((1D - newScale) * chancePerSize, 0D, 1D);
         var radius = Math.max(0D, ability.getStatData("target_loss_radius").getValue());
 
         if (chance <= 0D || radius <= 0D)
@@ -248,7 +249,7 @@ public class CharmOfShrinkingItem extends RAWearableRelicItem {
     }
 
     private static double clampScale(double scale) {
-        return Math.max(0.125D, Math.min(10D, scale));
+        return Math.clamp(scale, 0.125D, 10D);
     }
 
     @EventBusSubscriber(modid = ReliquifiedArtifacts.MODID)
@@ -284,7 +285,7 @@ public class CharmOfShrinkingItem extends RAWearableRelicItem {
 
                 if (isFallDamage && ability.getRankModifierData("fall_resistance").isEnabled()) {
                     var perSize = Math.max(0D, ability.getStatData("fall_reduction_per_size").getValue());
-                    var reduction = Math.max(0D, Math.min(1D, shrinkDelta * perSize));
+                    var reduction = Math.clamp(shrinkDelta * perSize, 0D, 1D);
 
                     if (reduction > fallReduction) {
                         fallReduction = reduction;
@@ -295,7 +296,7 @@ public class CharmOfShrinkingItem extends RAWearableRelicItem {
 
                 if (ability.getRankModifierData("evasion").isEnabled()) {
                     var perSize = Math.max(0D, ability.getStatData("evasion_per_size").getValue());
-                    var chance = Math.max(0D, Math.min(1D, shrinkDelta * perSize));
+                    var chance = Math.clamp(shrinkDelta * perSize, 0D, 1D);
 
                     if (chance > evasionChance) {
                         evasionChance = chance;
@@ -312,7 +313,7 @@ public class CharmOfShrinkingItem extends RAWearableRelicItem {
 
                 event.setAmount(reducedDamage);
 
-                if (fallRelic != null && reduced > 0F) {
+                if (reduced > 0F) {
                     var relicData = fallRelic.getRelicData(player, fallStack);
                     var ability = relicData.getAbilitiesData().getAbilityData("size");
 
@@ -329,14 +330,12 @@ public class CharmOfShrinkingItem extends RAWearableRelicItem {
             event.setAmount(0F);
             event.setCanceled(true);
 
-            if (evasionRelic != null) {
-                var relicData = evasionRelic.getRelicData(player, evasionStack);
-                var ability = relicData.getAbilitiesData().getAbilityData("size");
+            var relicData = evasionRelic.getRelicData(player, evasionStack);
+            var ability = relicData.getAbilitiesData().getAbilityData("size");
 
-                relicData.getLevelingData().addExperience("size", "evasion_parry", 1D);
-                ability.getStatisticData().getMetricData("evasion_misses").addValue(1D);
-                ability.getStatisticData().getMetricData("evasion_damage_avoided").addValue(avoidedDamage);
-            }
+            relicData.getLevelingData().addExperience("size", "evasion_parry", 1D);
+            ability.getStatisticData().getMetricData("evasion_misses").addValue(1D);
+            ability.getStatisticData().getMetricData("evasion_damage_avoided").addValue(avoidedDamage);
         }
     }
 }

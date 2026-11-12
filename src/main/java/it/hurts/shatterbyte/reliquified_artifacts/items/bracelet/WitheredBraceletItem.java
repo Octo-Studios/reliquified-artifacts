@@ -95,6 +95,7 @@ public class WitheredBraceletItem extends RAWearableRelicItem {
         return event.getSource().is(DamageTypes.WITHER) || event.getSource().is(DamageTypes.WITHER_SKULL);
     }
 
+    @SuppressWarnings("resource")
     private static boolean applyWitherFromBracelet(LivingEntity target, Player owner, int ticks, int amplifier) {
         if (ticks <= 0)
             return false;
@@ -115,6 +116,7 @@ public class WitheredBraceletItem extends RAWearableRelicItem {
         return newlyWithered;
     }
 
+    @SuppressWarnings("resource")
     private static Player getActiveOwner(LivingEntity target) {
         var level = target.level();
 
@@ -156,6 +158,7 @@ public class WitheredBraceletItem extends RAWearableRelicItem {
     @EventBusSubscriber(modid = ReliquifiedArtifacts.MODID)
     public static class CommonEvents {
         @SubscribeEvent
+        @SuppressWarnings("resource")
         public static void onLivingIncomingDamage(LivingIncomingDamageEvent event) {
             var entity = event.getEntity();
 
@@ -199,7 +202,7 @@ public class WitheredBraceletItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(player))
                     continue;
 
-                var chance = Math.max(0D, Math.min(1D, ability.getStatData("chance").getValue()));
+                var chance = Math.clamp(ability.getStatData("chance").getValue(), 0D, 1D);
 
                 if (chance <= 0D || player.getRandom().nextDouble() > chance)
                     continue;
@@ -217,6 +220,7 @@ public class WitheredBraceletItem extends RAWearableRelicItem {
         }
 
         @SubscribeEvent
+        @SuppressWarnings("resource")
         public static void onLivingDeath(LivingDeathEvent event) {
             var entity = event.getEntity();
             var level = entity.level();
@@ -258,7 +262,7 @@ public class WitheredBraceletItem extends RAWearableRelicItem {
                 spreadAmplifier = Math.max(spreadAmplifier, localAmplifier);
             }
 
-            if (spreadDuration <= 0 || spreadRadius <= 0D || spreadRelic == null || spreadStack.isEmpty())
+            if (spreadDuration == 0 || spreadRadius <= 0D || spreadRelic == null || spreadStack.isEmpty())
                 return;
 
             var radiusSq = spreadRadius * spreadRadius;
@@ -277,6 +281,7 @@ public class WitheredBraceletItem extends RAWearableRelicItem {
         }
 
         @SubscribeEvent
+        @SuppressWarnings("resource")
         public static void onLivingDamagePost(LivingDamageEvent.Post event) {
             var target = event.getEntity();
 

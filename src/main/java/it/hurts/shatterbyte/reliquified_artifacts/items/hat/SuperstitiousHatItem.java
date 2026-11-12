@@ -29,6 +29,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import org.jetbrains.annotations.Nullable;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class SuperstitiousHatItem extends RAWearableRelicItem {
 
     @Override
@@ -120,8 +121,7 @@ public class SuperstitiousHatItem extends RAWearableRelicItem {
         if (targetUuid.equals(getLastTargetUuid(stack)))
             return baseLooting + getLastLootingBonus(stack);
 
-        var baseChance = Math.max(0D, Math.min(1D, ability.getStatData("chance").getValue()));
-        var effectiveChance = baseChance;
+        var effectiveChance = Math.clamp(ability.getStatData("chance").getValue(), 0D, 1D);
         var maxCasts = Math.max(1, (int) MathUtils.round(ability.getStatData("max_casts").getValue(), 0));
         var animalBonus = 0;
 
@@ -134,7 +134,7 @@ public class SuperstitiousHatItem extends RAWearableRelicItem {
             var firstKillBonus = Math.max(0D, ability.getStatData("first_kill_bonus").getValue());
 
             if (firstWindowTicks <= 0L || ticksSinceLastKill > firstWindowTicks)
-                effectiveChance = Math.max(0D, Math.min(1D, effectiveChance + firstKillBonus));
+                effectiveChance = Math.clamp(effectiveChance + firstKillBonus, 0D, 1D);
         }
 
         if (ability.getRankModifierData("beast_hunter").isEnabled() && mob instanceof Animal)
@@ -152,7 +152,7 @@ public class SuperstitiousHatItem extends RAWearableRelicItem {
             streak = Math.min(streak, streakCap);
 
             if (streak > 1)
-                effectiveChance = Math.max(0D, Math.min(1D, effectiveChance + streakBonus * (streak - 1)));
+                effectiveChance = Math.clamp(effectiveChance + streakBonus * (streak - 1), 0D, 1D);
 
             lootingBonus = MathUtils.multicast(player.getRandom(), effectiveChance, maxCasts);
             setKillStreak(stack, streak);

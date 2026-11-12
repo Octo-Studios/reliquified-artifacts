@@ -36,6 +36,7 @@ import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class AquaDashersItem extends RAWearableRelicItem {
 
     @Override
@@ -98,15 +99,15 @@ public class AquaDashersItem extends RAWearableRelicItem {
 
         var ability = this.getRelicData(player, stack).getAbilitiesData().getAbilityData("water_dash");
         var freeDash = ability.getRankModifierData("free_dash").isEnabled();
-        var jumpBonus = ability.getRankModifierData("water_jump").isEnabled() ? Math.max(0D, Math.min(1D, ability.getStatData("jump_bonus").getValue())) : 0D;
+        var jumpBonus = ability.getRankModifierData("water_jump").isEnabled() ? Math.clamp(ability.getStatData("jump_bonus").getValue(), 0D, 1D) : 0D;
 
         if (!ability.canPlayerUse(player)) {
-            resetDashState(player, stack);
+            resetDashState(slotContext, stack);
             return;
         }
 
         if (player.isInWater()) {
-            resetDashState(player, stack);
+            resetDashState(slotContext, stack);
             return;
         }
 
@@ -120,16 +121,16 @@ public class AquaDashersItem extends RAWearableRelicItem {
         var applyJumpBonus = jumpBonus > 0D && onSurface;
 
         if (!active) {
-            EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             if (applyJumpBonus)
-                EntityUtils.resetAttribute(player, stack, Attributes.JUMP_STRENGTH, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                EntityUtils.resetAttribute(slotContext, stack, Attributes.JUMP_STRENGTH, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             else
-                EntityUtils.removeAttribute(player, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                EntityUtils.removeAttribute(slotContext, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
             if (keepSafeFall)
-                EntityUtils.resetAttribute(player, stack, Attributes.SAFE_FALL_DISTANCE, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                EntityUtils.resetAttribute(slotContext, stack, Attributes.SAFE_FALL_DISTANCE, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             else
-                EntityUtils.removeAttribute(player, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                EntityUtils.removeAttribute(slotContext, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
             if (!keepRecovery)
                 setRecoveryTicks(stack, 0);
@@ -141,21 +142,21 @@ public class AquaDashersItem extends RAWearableRelicItem {
         var recoveryTicks = Math.min(maxRecoveryTicks, currentRecoveryTicks + 1);
         setRecoveryTicks(stack, recoveryTicks);
 
-        var penalty = Math.max(0D, Math.min(1D, ability.getStatData("speed_penalty").getValue()));
-        var progress = Math.max(0D, Math.min(1D, (double) recoveryTicks / (double) maxRecoveryTicks));
+        var penalty = Math.clamp(ability.getStatData("speed_penalty").getValue(), 0D, 1D);
+        var progress = Math.clamp((double) recoveryTicks / (double) maxRecoveryTicks, 0D, 1D);
         var currentPenalty = Math.max(0D, penalty * (1D - progress));
 
         if (currentPenalty > 0D)
-            EntityUtils.resetAttribute(player, stack, Attributes.MOVEMENT_SPEED, (float) -currentPenalty, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, (float) -currentPenalty, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         else
-            EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
         if (jumpBonus > 0D) {
-            EntityUtils.resetAttribute(player, stack, Attributes.JUMP_STRENGTH, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-            EntityUtils.resetAttribute(player, stack, Attributes.SAFE_FALL_DISTANCE, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.JUMP_STRENGTH, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.SAFE_FALL_DISTANCE, (float) jumpBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         } else {
-            EntityUtils.removeAttribute(player, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-            EntityUtils.removeAttribute(player, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         }
     }
 
@@ -166,14 +167,14 @@ public class AquaDashersItem extends RAWearableRelicItem {
         if (stack.getItem() == newStack.getItem() || !(slotContext.entity() instanceof Player player) || player.level().isClientSide())
             return;
 
-        resetDashState(player, stack);
+        resetDashState(slotContext, stack);
     }
 
-    private void resetDashState(Player player, ItemStack stack) {
+    private void resetDashState(SlotContext slotContext, ItemStack stack) {
         setRecoveryTicks(stack, 0);
-        EntityUtils.removeAttribute(player, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-        EntityUtils.removeAttribute(player, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-        EntityUtils.removeAttribute(player, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.MOVEMENT_SPEED, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.JUMP_STRENGTH, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.SAFE_FALL_DISTANCE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     private int getRecoveryTicks(ItemStack stack) {
@@ -336,7 +337,7 @@ public class AquaDashersItem extends RAWearableRelicItem {
                 if (!isOnWaterSurface(player))
                     continue;
 
-                var jumpBonus = Math.max(0D, Math.min(1D, ability.getStatData("jump_bonus").getValue()));
+                var jumpBonus = Math.clamp(ability.getStatData("jump_bonus").getValue(), 0D, 1D);
 
                 if (jumpBonus <= 0D)
                     continue;
@@ -388,10 +389,7 @@ public class AquaDashersItem extends RAWearableRelicItem {
             if (owner == player)
                 return false;
 
-            if (owner instanceof LivingEntity living && living.isAlliedTo(player))
-                return false;
-
-            return true;
+            return !(owner instanceof LivingEntity living) || !living.isAlliedTo(player);
         }
     }
 }

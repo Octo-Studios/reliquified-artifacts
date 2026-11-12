@@ -35,6 +35,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class PocketPistonItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -107,42 +108,42 @@ public class PocketPistonItem extends RAWearableRelicItem {
         var ability = this.getRelicData(player, stack).getAbilitiesData().getAbilityData("piston");
 
         if (!ability.canPlayerUse(player)) {
-            removeRangeBonuses(player, stack);
+            removeRangeBonuses(slotContext, stack);
             return;
         }
 
         var rangeBonus = Math.max(0D, ability.getStatData("range_bonus").getValue());
 
         if (rangeBonus <= 0D)
-            removeRangeBonuses(player, stack);
+            removeRangeBonuses(slotContext, stack);
         else
-            applyRangeBonuses(player, stack, rangeBonus);
+            applyRangeBonuses(slotContext, stack, rangeBonus);
     }
 
     @Override
     public void onUnequip(SlotContext slotContext, ItemStack newStack, ItemStack stack) {
         super.onUnequip(slotContext, newStack, stack);
 
-        if (!(slotContext.entity() instanceof Player player) || stack.getItem() == newStack.getItem())
+        if (!(slotContext.entity() instanceof Player) || stack.getItem() == newStack.getItem())
             return;
 
-        removeRangeBonuses(player, stack);
+        removeRangeBonuses(slotContext, stack);
     }
 
-    private void applyRangeBonuses(Player player, ItemStack stack, double amount) {
-        if (player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE) != null)
-            EntityUtils.resetAttribute(player, stack, Attributes.ENTITY_INTERACTION_RANGE, (float) amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+    private void applyRangeBonuses(SlotContext slotContext, ItemStack stack, double amount) {
+        if (slotContext.entity().getAttribute(Attributes.ENTITY_INTERACTION_RANGE) != null)
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.ENTITY_INTERACTION_RANGE, (float) amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
-        if (player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE) != null)
-            EntityUtils.resetAttribute(player, stack, Attributes.BLOCK_INTERACTION_RANGE, (float) amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        if (slotContext.entity().getAttribute(Attributes.BLOCK_INTERACTION_RANGE) != null)
+            EntityUtils.resetAttribute(slotContext, stack, Attributes.BLOCK_INTERACTION_RANGE, (float) amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
-    private void removeRangeBonuses(Player player, ItemStack stack) {
-        if (player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE) != null)
-            EntityUtils.removeAttribute(player, stack, Attributes.ENTITY_INTERACTION_RANGE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+    private void removeRangeBonuses(SlotContext slotContext, ItemStack stack) {
+        if (slotContext.entity().getAttribute(Attributes.ENTITY_INTERACTION_RANGE) != null)
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.ENTITY_INTERACTION_RANGE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
-        if (player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE) != null)
-            EntityUtils.removeAttribute(player, stack, Attributes.BLOCK_INTERACTION_RANGE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        if (slotContext.entity().getAttribute(Attributes.BLOCK_INTERACTION_RANGE) != null)
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.BLOCK_INTERACTION_RANGE, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     }
 
     private static double distanceToBlock(Player player, BlockPos pos) {
@@ -192,7 +193,7 @@ public class PocketPistonItem extends RAWearableRelicItem {
             bestStack = stack;
         }
 
-        if (bestRelic == null || bestRangeBonus <= 0D)
+        if (bestRelic == null)
             return null;
 
         return new RangeContext(bestRelic, bestStack, bestRangeBonus);
@@ -228,7 +229,7 @@ public class PocketPistonItem extends RAWearableRelicItem {
                     emptyHandKnockback = Math.max(emptyHandKnockback, Math.max(0D, ability.getStatData("empty_hand_knockback").getValue()));
 
                 if (ability.getRankModifierData("distance_power").isEnabled()) {
-                    var localBonus = Math.max(0D, Math.min(1D, ability.getStatData("distance_bonus_per_block").getValue()));
+                    var localBonus = Math.clamp(ability.getStatData("distance_bonus_per_block").getValue(), 0D, 1D);
 
                     if (localBonus > distanceBonusPerBlock) {
                         distanceBonusPerBlock = localBonus;
@@ -257,7 +258,7 @@ public class PocketPistonItem extends RAWearableRelicItem {
 
                 event.setAmount(boostedDamage);
 
-                if (distancePowerRelic != null && extraDamage > 0F) {
+                if (extraDamage > 0F) {
                     var ability = distancePowerRelic.getRelicData(player, distancePowerStack).getAbilitiesData().getAbilityData("piston");
                     ability.getStatisticData().getMetricData("distance_power_bonus_damage").addValue(extraDamage);
                 }
@@ -266,12 +267,12 @@ public class PocketPistonItem extends RAWearableRelicItem {
             if (emptyHandKnockback > 0D && event.getEntity() instanceof LivingEntity target)
                 KnockbackHelper.apply(target, emptyHandKnockback, new Vec3(player.getX() - target.getX(), player.getY() - target.getY(), player.getZ() - target.getZ()));
 
-            if (!canApplyLongReachStun || stunTicks <= 0 || player.getAttackStrengthScale(0.5F) < 1F || !(event.getEntity() instanceof LivingEntity target))
+            if (!canApplyLongReachStun || stunTicks == 0 || player.getAttackStrengthScale(0.5F) < 1F)
                 return;
 
             var maxRange = player.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE);
 
-            if (maxRange > 0D && distance >= maxRange * 0.9D && target.addEffect(new MobEffectInstance(RelicsMobEffects.STUN, stunTicks, 0, false, true)) && stunRelic != null) {
+            if (maxRange > 0D && distance >= maxRange * 0.9D && event.getEntity().addEffect(new MobEffectInstance(RelicsMobEffects.STUN, stunTicks, 0, false, true))) {
                 var relicData = stunRelic.getRelicData(player, stunStack);
                 var ability = relicData.getAbilitiesData().getAbilityData("piston");
 
@@ -327,7 +328,7 @@ public class PocketPistonItem extends RAWearableRelicItem {
                 if (!ability.canPlayerUse(player) || !ability.getRankModifierData("distance_power").isEnabled())
                     continue;
 
-                bonusPerBlock = Math.max(bonusPerBlock, Math.max(0D, Math.min(1D, ability.getStatData("distance_bonus_per_block").getValue())));
+                bonusPerBlock = Math.max(bonusPerBlock, Math.clamp(ability.getStatData("distance_bonus_per_block").getValue(), 0D, 1D));
             }
 
             if (bonusPerBlock > 0D)

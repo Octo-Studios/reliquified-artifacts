@@ -19,6 +19,7 @@ import it.hurts.sskirillss.relics.init.RelicsScalingModels;
 import it.hurts.sskirillss.relics.utils.EntityUtils;
 import it.hurts.sskirillss.relics.utils.MathUtils;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -34,6 +35,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import top.theillusivec4.curios.api.SlotContext;
 
+@SuppressWarnings("resource")
 public class KittySlippersItem extends RAWearableRelicItem {
     @Override
     public RelicTemplate constructDefaultRelicTemplate() {
@@ -121,14 +123,14 @@ public class KittySlippersItem extends RAWearableRelicItem {
             var bonus = Math.max(0D, aura.getStatData("crouch_speed_bonus").getValue());
 
             if (bonus > 0D)
-                EntityUtils.resetAttribute(player, stack, Attributes.SNEAKING_SPEED, (float) (bonus * 0.3D), AttributeModifier.Operation.ADD_VALUE);
+                EntityUtils.resetAttribute(slotContext, stack, Attributes.SNEAKING_SPEED, (float) (bonus * 0.3D), AttributeModifier.Operation.ADD_VALUE);
             else
-                EntityUtils.removeAttribute(player, stack, Attributes.SNEAKING_SPEED, AttributeModifier.Operation.ADD_VALUE);
+                EntityUtils.removeAttribute(slotContext, stack, Attributes.SNEAKING_SPEED, AttributeModifier.Operation.ADD_VALUE);
 
             if (player.tickCount % 20 == 0 && player.isShiftKeyDown() && player.getKnownMovement().multiply(1D, 0D, 1D).length() > 1.0E-4D)
                 aura.getStatisticData().getMetricData("crouch_movement_time").addValue(1D);
         } else {
-            EntityUtils.removeAttribute(player, stack, Attributes.SNEAKING_SPEED, AttributeModifier.Operation.ADD_VALUE);
+            EntityUtils.removeAttribute(slotContext, stack, Attributes.SNEAKING_SPEED, AttributeModifier.Operation.ADD_VALUE);
         }
 
         var nineLives = this.getRelicData(player, stack).getAbilitiesData().getAbilityData("nine_lives");
@@ -150,7 +152,7 @@ public class KittySlippersItem extends RAWearableRelicItem {
             return;
 
         setDodgeReady(stack, false);
-        EntityUtils.removeAttribute(player, stack, Attributes.SNEAKING_SPEED, AttributeModifier.Operation.ADD_VALUE);
+        EntityUtils.removeAttribute(slotContext, stack, Attributes.SNEAKING_SPEED, AttributeModifier.Operation.ADD_VALUE);
     }
 
     private boolean isDodgeReady(ItemStack stack) {
@@ -165,7 +167,7 @@ public class KittySlippersItem extends RAWearableRelicItem {
         var level = player.level();
         var maxDistanceSq = radius * radius;
 
-        for (var creeper : level.getEntitiesOfClass(Creeper.class, player.getBoundingBox().inflate(radius), entity -> entity.isAlive())) {
+        for (var creeper : level.getEntitiesOfClass(Creeper.class, player.getBoundingBox().inflate(radius), LivingEntity::isAlive)) {
             if (creeper.distanceToSqr(player) > maxDistanceSq)
                 continue;
 
@@ -173,7 +175,7 @@ public class KittySlippersItem extends RAWearableRelicItem {
             creeper.setSwellDir(-1);
         }
 
-        for (var phantom : level.getEntitiesOfClass(Phantom.class, player.getBoundingBox().inflate(radius), entity -> entity.isAlive())) {
+        for (var phantom : level.getEntitiesOfClass(Phantom.class, player.getBoundingBox().inflate(radius), LivingEntity::isAlive)) {
             if (phantom.distanceToSqr(player) > maxDistanceSq)
                 continue;
 
@@ -266,7 +268,7 @@ public class KittySlippersItem extends RAWearableRelicItem {
                     relic.setDodgeReady(stack, false);
                 } else if (nineLives.getRankModifierData("evasion").isEnabled() && relic.isDodgeReady(stack)) {
                     hasDodgeRoll = true;
-                    var value = Math.max(0D, Math.min(1D, nineLives.getStatData("evasion_chance").getValue()));
+                    var value = Math.clamp(nineLives.getStatData("evasion_chance").getValue(), 0D, 1D);
 
                     if (dodgeRelic == null || value > dodgeChance) {
                         dodgeChance = value;
@@ -278,7 +280,7 @@ public class KittySlippersItem extends RAWearableRelicItem {
                 }
 
                 if (isFallDamage && aura.canPlayerUse(player) && aura.getRankModifierData("soft_landing").isEnabled()) {
-                    var value = Math.max(0D, Math.min(1D, aura.getStatData("fall_damage_reduction").getValue()));
+                    var value = Math.clamp(aura.getStatData("fall_damage_reduction").getValue(), 0D, 1D);
 
                     if (fallRelic == null || value > fallReduction) {
                         fallReduction = value;
@@ -292,7 +294,7 @@ public class KittySlippersItem extends RAWearableRelicItem {
                 event.setAmount(0F);
                 event.setCanceled(true);
 
-                if (dodgeRelic != null && !dodgeStack.isEmpty()) {
+                if (!dodgeStack.isEmpty()) {
                     var relicData = dodgeRelic.getRelicData(player, dodgeStack);
                     var ability = relicData.getAbilitiesData().getAbilityData("nine_lives");
 
@@ -309,7 +311,7 @@ public class KittySlippersItem extends RAWearableRelicItem {
 
                 var reduced = Math.max(0F, originalAmount - newAmount);
 
-                if (reduced > 0F && fallRelic != null && !fallStack.isEmpty())
+                if (reduced > 0F && !fallStack.isEmpty())
                     fallRelic.getRelicData(player, fallStack).getAbilitiesData().getAbilityData("feline_aura")
                             .getStatisticData().getMetricData("fall_damage_reduced").addValue(reduced);
             }
@@ -342,7 +344,7 @@ public class KittySlippersItem extends RAWearableRelicItem {
                     continue;
                 }
 
-                var value = Math.max(0D, Math.min(1D, ability.getStatData("survival_chance").getValue()));
+                var value = Math.clamp(ability.getStatData("survival_chance").getValue(), 0D, 1D);
 
                 if (survivalRelic == null || value > chance) {
                     chance = value;
@@ -351,7 +353,7 @@ public class KittySlippersItem extends RAWearableRelicItem {
                 }
             }
 
-            if (chance <= 0D || survivalRelic == null || survivalStack.isEmpty() || entity.getRandom().nextDouble() > chance)
+            if (chance <= 0D || survivalStack.isEmpty() || entity.getRandom().nextDouble() > chance)
                 return;
 
             var originalDamage = event.getNewDamage();
