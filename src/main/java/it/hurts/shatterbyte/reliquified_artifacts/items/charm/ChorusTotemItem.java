@@ -45,7 +45,7 @@ public class ChorusTotemItem extends RAWearableRelicItem {
                                 .rankModifier(3, "disorient")
                                 .rankModifier(5, "vanishing")
                                 .stat(AbilityStatTemplate.builder("cooldown")
-                                        .initialValue(75D, 100D)
+                                        .initialValue(100D, 75D)
                                         .targetValue(RelicsScalingModels.MULTIPLICATIVE_BASE.get(), 33.5D)
                                         .formatValue(value -> MathUtils.round(value, 1))
                                         .build())

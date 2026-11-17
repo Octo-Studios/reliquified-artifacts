@@ -39,7 +39,7 @@ public class FlippersItem extends RAWearableRelicItem {
                                 .rankModifier(3, "breathing")
                                 .rankModifier(5, "evasion")
                                 .stat(AbilityStatTemplate.builder("speed")
-                                        .initialValue(0.5D, 0.35D)
+                                        .initialValue(0.35D, 0.5D)
                                         .targetValue(RelicsScalingModels.MULTIPLICATIVE_BASE.get(), 1.00048D)
                                         .formatValue(value -> (int) MathUtils.round(value * 100D, 0))
                                         .build())
