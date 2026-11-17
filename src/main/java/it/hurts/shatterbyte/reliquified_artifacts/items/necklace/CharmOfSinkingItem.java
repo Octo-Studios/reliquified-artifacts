@@ -53,7 +53,7 @@ public class CharmOfSinkingItem extends RAWearableRelicItem {
                                         .formatValue(value -> MathUtils.round(value * 100D, 1))
                                         .build())
                                 .stat(AbilityStatTemplate.builder("immortality_delay")
-                                        .initialValue(10D, 15D)
+                                        .initialValue(15D, 10D)
                                         .targetValue(RelicsScalingModels.MULTIPLICATIVE_BASE.get(), 7.4925D)
                                         .formatValue(value -> MathUtils.round(value, 1))
                                         .build())
